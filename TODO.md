@@ -1,35 +1,52 @@
-# SkyFit Pro Bug Fixes & Lints - Analysis Complete
+# SkyFit Pro OTP Fix Task
 
-## flutter analyze Results (14 issues - all info/warnings, no errors):
+## Steps to Complete:
 
-- 1 warning: override_on_non_overriding_member (lib/main.dart:126)
-- 13 info: const prefs, curly braces, build_context_sync, naming, unused_element
+### 1. [x] Update AuthViewModel.registerWithEmail ✅
 
-## Status: Ready for fixes
+- Modified to auto signIn after createUser
+- Ensures returns true on success, notifies listeners
 
-### 1. [ ] Fix compile error in main.dart
+### 2. [x] Simplify RegisterView onVerified callback ✅
 
-- Add missing import for SkyFitRouteFactory/SkyFitTransitionStyle
+- Removed popUntil, registered modal, photo upload from callback
+- Now just calls authVM.registerWithEmail → userVM.createProfile
+- OTP view handles navigation to HomeView
 
-### 2. [ ] Fix NPE in WeatherViewModel.fetchWeather
+### 3. [ ] Test registration flow
 
-- Guard ActivityEngine.suggest with user != null
+- Register new user → enter OTP → verify → auto sign-in → HomeView
 
-### 3. [ ] Fix inconsistent Firebase usage in UserViewModel.updateProfilePicture
+### 4. [ ] Verify Firebase
 
-- Use injected services instead of raw Firebase
+- Check user created and signed in
+- Profile saved to Firestore
 
-### 4. [ ] Document iOS Firebase config issue in firebase_options.dart
+**Progress: 2/4**
 
-- Add comment; user to provide correct iOS values
+### 3. [ ] Test registration flow
 
-### 5. [ ] Run flutter analyze & test
+- Register new user → enter OTP → verify → auto sign-in → HomeView
 
-- Execute `flutter analyze`
-- `flutter run`
+### 4. [ ] Verify Firebase
 
-### 6. [ ] Cleanup
+- Check user created and signed in
+- Profile saved to Firestore
 
-- Close phantom VSCode tabs (skyfitpro MainActivity, duplicate google-services)
+**Progress: 1/4**
 
-**Notes:** No new files created. Only precise edits to existing files.
+### 2. [ ] Simplify RegisterView onVerified callback
+
+- Remove popUntil, registered modal, photo upload (move elsewhere)
+- Just call authVM.registerWithEmail → userVM.createProfile → return
+
+### 3. [ ] Test registration flow
+
+- Register new user → enter OTP → verify → auto sign-in → HomeView
+
+### 4. [ ] Verify Firebase
+
+- Check user created and signed in
+- Profile saved to Firestore
+
+**Progress: 0/4**

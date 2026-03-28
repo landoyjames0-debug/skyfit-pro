@@ -809,9 +809,9 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
                   key: const ValueKey('bio-idle'),
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
+                    const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           Icon(Icons.fingerprint_rounded,
                               color: Color(0xFF00D4FF), size: 24),
                           SizedBox(width: 10),

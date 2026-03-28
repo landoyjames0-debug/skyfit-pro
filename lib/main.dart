@@ -122,7 +122,6 @@ class SkyFitProApp extends StatelessWidget {
 }
 
 class SkyFitUnknownRoute extends Route<dynamic> {
-  @override
   Widget buildPageWithStateInfo(
     BuildContext context,
     RouteSettings settings,

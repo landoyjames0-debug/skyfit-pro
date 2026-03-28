@@ -24,7 +24,7 @@ RUN flutter pub get
 
 COPY . .
 
-# Build with secrets injected via --dart-define (M4 Security)
+# Build-time secrets injected via --dart-define (M4 Security)
 ARG FIREBASE_API_KEY
 ARG FIREBASE_APP_ID
 ARG FIREBASE_MESSAGING_SENDER_ID
@@ -34,6 +34,7 @@ ARG FIREBASE_STORAGE_BUCKET
 ARG OPENWEATHER_API_KEY
 ARG GOOGLE_WEB_CLIENT_ID
 
+# Build Flutter web with all secrets injected at compile time
 RUN flutter build web --release \
     --dart-define=FIREBASE_API_KEY=${FIREBASE_API_KEY} \
     --dart-define=FIREBASE_APP_ID=${FIREBASE_APP_ID} \
@@ -43,6 +44,13 @@ RUN flutter build web --release \
     --dart-define=FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET} \
     --dart-define=OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY} \
     --dart-define=GOOGLE_WEB_CLIENT_ID=${GOOGLE_WEB_CLIENT_ID}
+
+# Inject GOOGLE_WEB_CLIENT_ID into the built index.html <meta> tag
+# This is needed because the GSI script reads it from the DOM at runtime,
+# not from Dart — so dart-define alone is not enough for Google Sign-In on web.
+RUN sed -i \
+    "s|content=\"YOUR_WEB_CLIENT_ID_PLACEHOLDER\"|content=\"${GOOGLE_WEB_CLIENT_ID}\"|g" \
+    /app/build/web/index.html
 
 # ============================================================
 # Stage 2: Serve with nginx (lightweight production image)

@@ -4,6 +4,7 @@ class ActivityModel {
   final String emoji;
   final String intensity; // Low, Medium, High
   final String videoUrl;
+  final String videoAsset; // Local asset path e.g. 'assets/videos/yoga.mp4'
   final int durationMinutes;
 
   ActivityModel({
@@ -12,6 +13,7 @@ class ActivityModel {
     required this.emoji,
     required this.intensity,
     required this.videoUrl,
+    required this.videoAsset,
     required this.durationMinutes,
   });
 }

@@ -11,70 +11,68 @@ import 'widgets/activity_card.dart';
 import 'widgets/weather_card.dart';
 import 'auth/login_view.dart';
 
-// ─── Design System ─────────────────────────────────────────────────────────────
-class _DS {
-  // Brand
-  static const Color brand = Color(0xFF2563EB); // Royal blue
-  static const Color brandLight = Color(0xFF3B82F6);
-  static const Color brandDim = Color(0xFF1D4ED8);
-  static const Color accent = Color(0xFF06B6D4); // Cyan teal
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color danger = Color(0xFFEF4444);
+// ─── Design System (matches ProfileView's _T) ─────────────────────────────────
+class _T {
+  _T._();
 
-  // Dark palette
-  static const Color darkBg = Color(0xFF0A0F1E);
-  static const Color darkSurface = Color(0xFF111827);
-  static const Color darkSurface2 = Color(0xFF1C2537);
-  static const Color darkBorder = Color(0xFF1E293B);
-  static const Color darkBorder2 = Color(0xFF263348);
+  static bool isDark(BuildContext ctx) {
+    final authVM = ctx.read<AuthViewModel>();
+    return authVM.themeMode == ThemeMode.dark ||
+        (authVM.themeMode == ThemeMode.system &&
+            MediaQuery.of(ctx).platformBrightness == Brightness.dark);
+  }
 
-  // Light palette
-  static const Color lightBg = Color(0xFFF8FAFC);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurface2 = Color(0xFFF1F5F9);
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color lightBorder2 = Color(0xFFCBD5E1);
-
-  // Text
+  /// Returns the primary text color for the given [dark] mode.
+  ///
+  /// If [dark] is true, returns white. Otherwise, returns a dark blue color.
+  ///
+  /// This color is used throughout the app for primary text elements.
+  ///
+  /// See also:
+  ///
+  /// * [textSecondary], which returns the secondary text color based on the given [dark] mode.
+  /// * [textMuted], which returns the muted text color based on the given [dark] mode.
+  /// * [scaffoldBg], which returns the background color for the given [dark] mode.
+  /// * [cardBg], which returns the background color for cards in the given [dark] mode.
   static Color textPrimary(bool dark) =>
-      dark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+      dark ? Colors.white : const Color(0xFF0F1923);
   static Color textSecondary(bool dark) =>
-      dark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+      dark ? const Color(0xFF8A9BB0) : const Color(0xFF5A6A7A);
   static Color textMuted(bool dark) =>
-      dark ? const Color(0xFF475569) : const Color(0xFF94A3B8);
+      dark ? const Color(0xFF4A5568) : const Color(0xFF9AA5B4);
 
-  static Color bg(bool dark) => dark ? darkBg : lightBg;
-  static Color surface(bool dark) => dark ? darkSurface : lightSurface;
-  static Color surface2(bool dark) => dark ? darkSurface2 : lightSurface2;
-  static Color border(bool dark) => dark ? darkBorder : lightBorder;
-  static Color border2(bool dark) => dark ? darkBorder2 : lightBorder2;
+  static Color scaffoldBg(bool dark) =>
+      dark ? const Color(0xFF050810) : const Color(0xFFF0F4F8);
+  static Color cardBg(bool dark) =>
+      dark ? const Color(0xFF0D1117) : Colors.white;
+  static Color cardBorder(bool dark) =>
+      dark ? Colors.white.withValues(alpha: 0.09) : const Color(0xFFDDE4ED);
+  static Color inputFill(bool dark) =>
+      dark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F9FC);
+  static Color inputBorder(bool dark) =>
+      dark ? Colors.white.withValues(alpha: 0.09) : const Color(0xFFCDD5DF);
+  static Color divider(bool dark) =>
+      dark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
 
-  // Glassmorphism helper
-  static Color glass(bool dark) => dark
-      ? Colors.white.withValues(alpha: 0.04)
-      : Colors.white.withValues(alpha: 0.7);
-  static Color glassBorder(bool dark) => dark
-      ? Colors.white.withValues(alpha: 0.08)
-      : Colors.white.withValues(alpha: 0.9);
+  static const Color cyan = Color(0xFF00D4FF);
+  static const Color violet = Color(0xFF7B61FF);
+  static const Color green = Color(0xFF4ADE80);
+  static const Color red = Color(0xFFFF4D6D);
+  static const Color amber = Color(0xFFFFB547);
 
-  // Shadows
-  static List<BoxShadow> shadow(bool dark,
-          {Color? color, double intensity = 1}) =>
-      [
+  static List<BoxShadow> cardShadow(bool dark) => [
         BoxShadow(
-          color: (color ?? (dark ? Colors.black : const Color(0xFF64748B)))
-              .withValues(alpha: dark ? 0.4 * intensity : 0.08 * intensity),
-          blurRadius: 24 * intensity,
-          offset: Offset(0, 8 * intensity),
+          color: Colors.black.withValues(alpha: dark ? 0.25 : 0.06),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
         ),
       ];
 
-  static List<BoxShadow> brandGlow({double alpha = 0.25}) => [
+  static List<BoxShadow> glowShadow(Color color) => [
         BoxShadow(
-          color: brand.withValues(alpha: alpha),
-          blurRadius: 20,
-          offset: const Offset(0, 6),
+          color: color.withValues(alpha: 0.3),
+          blurRadius: 14,
+          offset: const Offset(0, 5),
         ),
       ];
 }
@@ -146,9 +144,9 @@ class SessionTimerChipState extends State<_SessionTimerChip> {
   }
 
   Color get _chipColor {
-    if (_remaining > 120) return _DS.success;
-    if (_remaining > 60) return _DS.warning;
-    return _DS.danger;
+    if (_remaining > 120) return _T.green;
+    if (_remaining > 60) return _T.amber;
+    return _T.red;
   }
 
   @override
@@ -208,7 +206,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _bgAnimController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 20))
+        AnimationController(vsync: this, duration: const Duration(seconds: 16))
           ..repeat();
     _fadeController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
@@ -251,18 +249,19 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: _DS.surface(dark),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _DS.danger.withValues(alpha: 0.3)),
+              color: _T.cardBg(dark),
+              borderRadius: BorderRadius.circular(26),
+              border:
+                  Border.all(color: _T.red.withValues(alpha: 0.3), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                    color: _DS.danger.withValues(alpha: 0.15),
+                    color: _T.red.withValues(alpha: 0.12),
                     blurRadius: 40,
                     spreadRadius: 2),
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 60,
-                    offset: const Offset(0, 24)),
+                    color: Colors.black.withValues(alpha: dark ? 0.55 : 0.12),
+                    blurRadius: 40,
+                    offset: const Offset(0, 20)),
               ],
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -271,25 +270,23 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                   height: 72,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _DS.danger.withValues(alpha: 0.1),
+                      color: _T.red.withValues(alpha: 0.1),
                       border: Border.all(
-                          color: _DS.danger.withValues(alpha: 0.3),
-                          width: 1.5)),
+                          color: _T.red.withValues(alpha: 0.3), width: 1.5)),
                   child: const Icon(Icons.lock_clock_rounded,
-                      color: _DS.danger, size: 32)),
+                      color: _T.red, size: 32)),
               const SizedBox(height: 20),
               Text('Session Expired',
                   style: TextStyle(
-                      color: _DS.textPrimary(dark),
+                      color: _T.textPrimary(dark),
                       fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3)),
+                      fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
               Text(
                   'You were inactive for 5 minutes.\nYour session has been locked for security.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: _DS.textSecondary(dark),
+                      color: _T.textSecondary(dark),
                       fontSize: 13,
                       height: 1.6)),
               const SizedBox(height: 24),
@@ -298,14 +295,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                 height: 48,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: _DS.danger,
-                      boxShadow: [
-                        BoxShadow(
-                            color: _DS.danger.withValues(alpha: 0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4))
-                      ]),
+                      borderRadius: BorderRadius.circular(14),
+                      color: _T.red,
+                      boxShadow: _T.glowShadow(_T.red)),
                   child: TextButton(
                     onPressed: () async {
                       Navigator.of(context, rootNavigator: true).pop();
@@ -321,8 +313,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.1)),
+                                  fontWeight: FontWeight.w700)),
                         ]),
                   ),
                 ),
@@ -394,13 +385,12 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
   void _showLogoutConfirmation() {
     if (!mounted) return;
     final dark = _resolveDark(context);
-
     showGeneralDialog<bool>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withValues(alpha: 0.6),
-      transitionDuration: const Duration(milliseconds: 300),
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      transitionDuration: const Duration(milliseconds: 320),
       transitionBuilder: (ctx, anim, _, child) => ScaleTransition(
           scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
           child: FadeTransition(opacity: anim, child: child)),
@@ -410,15 +400,16 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 24),
             constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: _DS.surface(dark),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _DS.border(dark)),
+              color: _T.cardBg(dark),
+              borderRadius: BorderRadius.circular(26),
+              border:
+                  Border.all(color: _T.red.withValues(alpha: 0.25), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 48,
+                    color: Colors.black.withValues(alpha: dark ? 0.55 : 0.12),
+                    blurRadius: 40,
                     offset: const Offset(0, 20)),
               ],
             ),
@@ -428,24 +419,22 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                   height: 64,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _DS.danger.withValues(alpha: 0.08),
+                      color: _T.red.withValues(alpha: 0.08),
                       border: Border.all(
-                          color: _DS.danger.withValues(alpha: 0.25),
-                          width: 1.5)),
+                          color: _T.red.withValues(alpha: 0.3), width: 1.5)),
                   child: const Icon(Icons.logout_rounded,
-                      color: _DS.danger, size: 26)),
+                      color: _T.red, size: 26)),
               const SizedBox(height: 16),
               Text('Sign Out?',
                   style: TextStyle(
-                      color: _DS.textPrimary(dark),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2)),
+                      color: _T.textPrimary(dark),
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
               Text('Your session will be securely ended.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: _DS.textSecondary(dark),
+                      color: _T.textSecondary(dark),
                       fontSize: 13,
                       height: 1.5)),
               const SizedBox(height: 24),
@@ -454,18 +443,19 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                     child: GestureDetector(
                         onTap: () => Navigator.of(ctx).pop(false),
                         child: Container(
-                            height: 44,
+                            height: 46,
                             decoration: BoxDecoration(
-                                color: _DS.surface2(dark),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: _DS.border(dark))),
+                                color: _T.inputFill(dark),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: _T.inputBorder(dark))),
                             child: Center(
                                 child: Text('Cancel',
                                     style: TextStyle(
-                                        color: _DS.textSecondary(dark),
+                                        color: _T.textSecondary(dark),
                                         fontWeight: FontWeight.w600,
-                                        fontSize: 13)))))),
-                const SizedBox(width: 10),
+                                        fontSize: 14)))))),
+                const SizedBox(width: 12),
                 Expanded(
                     child: GestureDetector(
                         onTap: () {
@@ -475,22 +465,17 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                           });
                         },
                         child: Container(
-                            height: 44,
+                            height: 46,
                             decoration: BoxDecoration(
-                                color: _DS.danger,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: _DS.danger.withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4))
-                                ]),
+                                borderRadius: BorderRadius.circular(12),
+                                color: _T.red,
+                                boxShadow: _T.glowShadow(_T.red)),
                             child: const Center(
                                 child: Text('Sign Out',
                                     style: TextStyle(
                                         color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13)))))),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14)))))),
               ]),
             ]),
           ),
@@ -530,11 +515,14 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       },
       onScaleUpdate: (_) => _onUserInteraction(),
       child: Scaffold(
-        backgroundColor: _DS.bg(dark),
+        backgroundColor: _T.scaffoldBg(dark),
         body: Stack(children: [
-          // Subtle ambient background
-          _AmbientBackground(
-              controller: _bgAnimController, size: size, dark: dark),
+          // Animated background matching ProfileView
+          if (dark)
+            _AnimatedBackground(controller: _bgAnimController, size: size)
+          else
+            _LightBackground(size: size),
+
           SafeArea(
             child: FadeTransition(
               opacity: _fadeAnim,
@@ -544,6 +532,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
               ]),
             ),
           ),
+
           // Scroll-to-top FAB
           Positioned(
             bottom: 24,
@@ -568,8 +557,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                               height: 44,
                               decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-                                  color: _DS.brand,
-                                  boxShadow: _DS.brandGlow()),
+                                  gradient: const LinearGradient(
+                                      colors: [_T.cyan, _T.violet]),
+                                  boxShadow: _T.glowShadow(_T.cyan)),
                               child: const Icon(Icons.keyboard_arrow_up_rounded,
                                   color: Colors.white, size: 20))),
                     ))),
@@ -579,7 +569,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
     );
   }
 
-  // ─── App Bar ──────────────────────────────────────────────────────────────────
+  // ─── App Bar ───────────────────────────────────────────────────────────────
   Widget _buildAppBar(BuildContext context, bool dark) {
     final userVM = context.watch<UserViewModel>();
     final authVM = context.watch<AuthViewModel>();
@@ -597,19 +587,19 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: BoxDecoration(
         color: dark
-            ? _DS.darkSurface.withValues(alpha: 0.9)
-            : Colors.white.withValues(alpha: 0.92),
-        border: Border(bottom: BorderSide(color: _DS.border(dark), width: 1)),
+            ? Colors.black.withValues(alpha: 0.30)
+            : Colors.white.withValues(alpha: 0.85),
+        border: Border(bottom: BorderSide(color: _T.divider(dark), width: 1)),
       ),
       child: Row(children: [
-        // Brand icon
+        // Brand icon with gradient
         Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: _DS.brand,
-                boxShadow: _DS.brandGlow(alpha: 0.2)),
+                gradient: const LinearGradient(colors: [_T.cyan, _T.violet]),
+                boxShadow: _T.glowShadow(_T.cyan)),
             child: const Icon(Icons.fitness_center_rounded,
                 color: Colors.white, size: 16)),
         const SizedBox(width: 10),
@@ -617,16 +607,21 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('SkyFit Pro',
-                style: TextStyle(
-                    color: _DS.textPrimary(dark),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2)),
+            ShaderMask(
+              shaderCallback: (b) =>
+                  const LinearGradient(colors: [_T.cyan, _T.violet])
+                      .createShader(b),
+              child: const Text('SkyFit Pro',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2)),
+            ),
             Text('$greeting, $firstName',
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                    color: _DS.textMuted(dark),
+                    color: _T.textMuted(dark),
                     fontSize: 11,
                     fontWeight: FontWeight.w500)),
           ]),
@@ -649,12 +644,12 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                    color: _DS.surface2(dark),
+                    color: _T.inputFill(dark),
                     borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: _DS.border(dark))),
+                    border: Border.all(color: _T.inputBorder(dark))),
                 child: Icon(
                     dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                    color: _DS.textSecondary(dark),
+                    color: _T.textSecondary(dark),
                     size: 15))),
         const SizedBox(width: 8),
         // Avatar
@@ -667,13 +662,14 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                 height: 34,
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _DS.brand,
+                    gradient:
+                        const LinearGradient(colors: [_T.cyan, _T.violet]),
                     border: Border.all(
                         color: _menuOpen
-                            ? _DS.brand.withValues(alpha: 0.6)
+                            ? _T.cyan.withValues(alpha: 0.6)
                             : Colors.transparent,
                         width: 2),
-                    boxShadow: _menuOpen ? _DS.brandGlow(alpha: 0.35) : null),
+                    boxShadow: _menuOpen ? _T.glowShadow(_T.cyan) : null),
                 child: user?.profilePictureUrl != null
                     ? ClipOval(
                         child: Image.network(user!.profilePictureUrl!,
@@ -689,7 +685,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
     );
   }
 
-  // ─── Body ─────────────────────────────────────────────────────────────────────
+  // ─── Body ──────────────────────────────────────────────────────────────────
   Widget _buildBody(BuildContext context, bool dark) {
     final weatherVM = context.watch<WeatherViewModel>();
     final userVM = context.watch<UserViewModel>();
@@ -701,12 +697,12 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             width: 40,
             height: 40,
             child: CircularProgressIndicator(
-                color: _DS.brand,
-                backgroundColor: _DS.brand.withValues(alpha: 0.1),
+                color: _T.cyan,
+                backgroundColor: _T.cyan.withValues(alpha: 0.1),
                 strokeWidth: 3)),
         const SizedBox(height: 16),
         Text('Loading your dashboard...',
-            style: TextStyle(color: _DS.textMuted(dark), fontSize: 13)),
+            style: TextStyle(color: _T.textMuted(dark), fontSize: 13)),
       ]));
     }
 
@@ -721,22 +717,22 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _DS.danger.withValues(alpha: 0.08),
+                            color: _T.red.withValues(alpha: 0.08),
                             border: Border.all(
-                                color: _DS.danger.withValues(alpha: 0.25))),
+                                color: _T.red.withValues(alpha: 0.25))),
                         child: const Icon(Icons.cloud_off_rounded,
-                            color: _DS.danger, size: 36)),
+                            color: _T.red, size: 36)),
                     const SizedBox(height: 16),
                     Text('Weather Unavailable',
                         style: TextStyle(
-                            color: _DS.textPrimary(dark),
+                            color: _T.textPrimary(dark),
                             fontSize: 16,
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     Text(weatherVM.errorMessage!,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            color: _DS.textSecondary(dark), fontSize: 13)),
+                            color: _T.textSecondary(dark), fontSize: 13)),
                     const SizedBox(height: 20),
                     GestureDetector(
                         onTap: () {
@@ -747,9 +743,10 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 11),
                             decoration: BoxDecoration(
-                                color: _DS.brand,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: _DS.brandGlow()),
+                                borderRadius: BorderRadius.circular(12),
+                                gradient: const LinearGradient(
+                                    colors: [_T.cyan, _T.violet]),
+                                boxShadow: _T.glowShadow(_T.cyan)),
                             child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -759,15 +756,15 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                                   Text('Try Again',
                                       style: TextStyle(
                                           color: Colors.white,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 13))
                                 ]))),
                   ])));
     }
 
     return RefreshIndicator(
-      color: _DS.brand,
-      backgroundColor: _DS.surface(dark),
+      color: _T.cyan,
+      backgroundColor: _T.cardBg(dark),
       onRefresh: () {
         _onUserInteraction();
         return weatherVM.fetchWeather(userVM.user);
@@ -784,12 +781,12 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
               if (weatherVM.weather != null) ...[
                 Container(
                     decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: _DS.surface(dark),
-                        border: Border.all(color: _DS.border(dark)),
-                        boxShadow: _DS.shadow(dark)),
+                        borderRadius: BorderRadius.circular(20),
+                        color: _T.cardBg(dark),
+                        border: Border.all(color: _T.cardBorder(dark)),
+                        boxShadow: _T.cardShadow(dark)),
                     child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         child: WeatherCard(weather: weatherVM.weather!))),
                 const SizedBox(height: 12),
               ],
@@ -804,7 +801,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
               Row(children: [
                 Text("Today's Activities",
                     style: TextStyle(
-                        color: _DS.textPrimary(dark),
+                        color: _T.textPrimary(dark),
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.2)),
@@ -813,11 +810,13 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                        color: _DS.brand.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6)),
+                        color: _T.cyan.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border:
+                            Border.all(color: _T.cyan.withValues(alpha: 0.2))),
                     child: Text('${weatherVM.activities.length} activities',
-                        style: TextStyle(
-                            color: _DS.brand,
+                        style: const TextStyle(
+                            color: _T.cyan,
                             fontSize: 11,
                             fontWeight: FontWeight.w600))),
               ]),
@@ -828,12 +827,12 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Container(
                       decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: _DS.surface(dark),
-                          border: Border.all(color: _DS.border(dark)),
-                          boxShadow: _DS.shadow(dark, intensity: 0.7)),
+                          borderRadius: BorderRadius.circular(16),
+                          color: _T.cardBg(dark),
+                          border: Border.all(color: _T.cardBorder(dark)),
+                          boxShadow: _T.cardShadow(dark)),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         child: ActivityCard(activity: a),
                       ),
                     ),
@@ -845,7 +844,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
     );
   }
 
-  // ─── Stats Bar ────────────────────────────────────────────────────────────────
+  // ─── Stats Bar ─────────────────────────────────────────────────────────────
   Widget _buildStatsBar(UserViewModel userVM, bool dark) {
     final user = userVM.user!;
     final weightLabel = user.weightKg == user.weightKg.truncateToDouble()
@@ -856,103 +855,80 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: _DS.surface(dark),
-        border: Border.all(color: _DS.border(dark)),
-        boxShadow: _DS.shadow(dark, intensity: 0.8),
+        color: _T.cardBg(dark),
+        border: Border.all(color: _T.cardBorder(dark)),
+        boxShadow: _T.cardShadow(dark),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Three stat tiles ──
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                _statTile(
-                  value: user.age.toString(),
-                  label: 'Age',
-                  color: _DS.brand,
-                  icon: Icons.cake_outlined,
-                  dark: dark,
-                ),
-                _statVerticalDivider(dark),
-                _statTile(
-                  value: weightLabel,
-                  label: 'Weight',
-                  color: _DS.warning,
-                  icon: Icons.monitor_weight_outlined,
-                  dark: dark,
-                ),
-                _statVerticalDivider(dark),
-                _statTile(
-                  value: user.weightCategory,
-                  label: 'Category',
-                  color: _DS.success,
-                  icon: Icons.equalizer_rounded,
-                  dark: dark,
-                  isCategory: true,
-                ),
-              ],
-            ),
-          ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Three stat tiles ──
+        IntrinsicHeight(
+          child: Row(children: [
+            _statTile(
+                value: user.age.toString(),
+                label: 'Age',
+                color: _T.cyan,
+                icon: Icons.cake_outlined,
+                dark: dark),
+            _statVerticalDivider(dark),
+            _statTile(
+                value: weightLabel,
+                label: 'Weight',
+                color: _T.amber,
+                icon: Icons.monitor_weight_outlined,
+                dark: dark),
+            _statVerticalDivider(dark),
+            _statTile(
+                value: user.weightCategory,
+                label: 'Category',
+                color: _T.green,
+                icon: Icons.equalizer_rounded,
+                dark: dark,
+                isCategory: true),
+          ]),
+        ),
 
-          // ── Fitness goal ──
-          if (user.fitnessGoal != null) ...[
-            const SizedBox(height: 16),
-            Container(
+        // ── Fitness goal ──
+        if (user.fitnessGoal != null) ...[
+          const SizedBox(height: 16),
+          Container(
               height: 1,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _DS.brand.withValues(alpha: 0.3),
-                    _DS.accent.withValues(alpha: 0.15),
-                    Colors.transparent,
-                  ],
-                ),
+                gradient: LinearGradient(colors: [
+                  _T.cyan.withValues(alpha: 0.3),
+                  _T.violet.withValues(alpha: 0.15),
+                  Colors.transparent
+                ]),
+              )),
+          const SizedBox(height: 14),
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: _T.cyan.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _T.cyan.withValues(alpha: 0.2)),
               ),
+              child: const Icon(Icons.flag_outlined, color: _T.cyan, size: 13),
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: _DS.brand.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _DS.brand.withValues(alpha: 0.2)),
-                  ),
-                  child: const Icon(Icons.flag_outlined,
-                      color: _DS.brand, size: 13),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Fitness Goal',
-                      style: TextStyle(
-                        color: _DS.textMuted(dark),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      user.fitnessGoal!,
-                      style: const TextStyle(
-                        color: _DS.brand,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.1,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Fitness Goal',
+                  style: TextStyle(
+                      color: _T.textMuted(dark),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.4)),
+              const SizedBox(height: 1),
+              Text(user.fitnessGoal!,
+                  style: const TextStyle(
+                      color: _T.cyan,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.1)),
+            ]),
+          ]),
         ],
-      ),
+      ]),
     );
   }
 
@@ -968,45 +944,35 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Icon badge
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withValues(alpha: 0.2)),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: color.withValues(alpha: 0.2)),
+                ),
+                child: Icon(icon, color: color, size: 16),
               ),
-              child: Icon(icon, color: color, size: 16),
-            ),
-            const SizedBox(height: 10),
-            // Value
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: isCategory ? 15 : 24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: isCategory ? -0.2 : -0.8,
-                height: 1.0,
-              ),
-            ),
-            const SizedBox(height: 4),
-            // Label
-            Text(
-              label,
-              style: TextStyle(
-                color: _DS.textMuted(dark),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ],
-        ),
+              const SizedBox(height: 10),
+              Text(value,
+                  style: TextStyle(
+                      color: color,
+                      fontSize: isCategory ? 15 : 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: isCategory ? -0.2 : -0.8,
+                      height: 1.0)),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: TextStyle(
+                      color: _T.textMuted(dark),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.2)),
+            ]),
       ),
     );
   }
@@ -1020,9 +986,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             end: Alignment.bottomCenter,
             colors: [
               Colors.transparent,
-              _DS.border2(dark),
-              _DS.border2(dark),
-              Colors.transparent,
+              _T.divider(dark),
+              _T.divider(dark),
+              Colors.transparent
             ],
           ),
         ),
@@ -1095,56 +1061,53 @@ class _MiniMenuOverlayState extends State<_MiniMenuOverlay>
               child: Container(
                 width: 168,
                 decoration: BoxDecoration(
-                    color: _DS.surface(dark),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _DS.border(dark)),
+                    color: _T.cardBg(dark),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _T.cardBorder(dark)),
                     boxShadow: [
                       BoxShadow(
                           color: Colors.black.withValues(alpha: 0.25),
                           blurRadius: 24,
-                          offset: const Offset(0, 8)),
+                          offset: const Offset(0, 8))
                     ]),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    // My Profile
                     Material(
                         color: Colors.transparent,
                         child: InkWell(
                             onTap: widget.onSettings,
-                            splashColor: _DS.brand.withValues(alpha: 0.08),
-                            highlightColor: _DS.brand.withValues(alpha: 0.04),
+                            splashColor: _T.cyan.withValues(alpha: 0.08),
+                            highlightColor: _T.cyan.withValues(alpha: 0.04),
                             child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 12),
                                 child: Row(children: [
                                   Icon(Icons.person_outline_rounded,
-                                      color: _DS.textSecondary(dark), size: 16),
+                                      color: _T.textSecondary(dark), size: 16),
                                   const SizedBox(width: 10),
                                   Text('My Profile',
                                       style: TextStyle(
-                                          color: _DS.textPrimary(dark),
+                                          color: _T.textPrimary(dark),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500))
                                 ])))),
-                    Divider(height: 1, thickness: 1, color: _DS.border(dark)),
-                    // Sign Out
+                    Divider(height: 1, thickness: 1, color: _T.divider(dark)),
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: widget.onLogout,
-                        splashColor: _DS.danger.withValues(alpha: 0.08),
-                        highlightColor: _DS.danger.withValues(alpha: 0.04),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
+                        splashColor: _T.red.withValues(alpha: 0.08),
+                        highlightColor: _T.red.withValues(alpha: 0.04),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 14, vertical: 12),
                           child: Row(children: [
-                            const Icon(Icons.logout_rounded,
-                                color: _DS.danger, size: 16),
-                            const SizedBox(width: 10),
-                            const Text('Sign Out',
+                            Icon(Icons.logout_rounded, color: _T.red, size: 16),
+                            SizedBox(width: 10),
+                            Text('Sign Out',
                                 style: TextStyle(
-                                    color: _DS.danger,
+                                    color: _T.red,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500)),
                           ]),
@@ -1162,55 +1125,92 @@ class _MiniMenuOverlayState extends State<_MiniMenuOverlay>
   }
 }
 
-// ─── Ambient Background ───────────────────────────────────────────────────────
-class _AmbientBackground extends StatelessWidget {
+// ─── Animated dark background (matches ProfileView) ───────────────────────────
+class _AnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
-  final bool dark;
-  const _AmbientBackground(
-      {required this.controller, required this.size, required this.dark});
+  const _AnimatedBackground({required this.controller, required this.size});
 
   @override
   Widget build(BuildContext context) {
-    if (!dark) return const SizedBox.shrink();
     return AnimatedBuilder(
         animation: controller,
         builder: (_, __) => CustomPaint(
-            size: size, painter: _AmbientPainter(controller.value)));
+            size: size, painter: _DarkOrbPainter(controller.value)));
   }
 }
 
-class _AmbientPainter extends CustomPainter {
+class _DarkOrbPainter extends CustomPainter {
   final double t;
-  _AmbientPainter(this.t);
+  _DarkOrbPainter(this.t);
 
   @override
   void paint(Canvas canvas, Size size) {
     final a1 = t * 2 * math.pi;
-    final c1 = Offset(size.width * 0.15 + math.cos(a1) * 20,
-        size.height * 0.12 + math.sin(a1) * 15);
+    final c1 = Offset(size.width * 0.85 + math.cos(a1) * 35,
+        size.height * 0.1 + math.sin(a1) * 25);
     canvas.drawCircle(
         c1,
-        160,
-        Paint()
-          ..shader = RadialGradient(colors: [
-            const Color(0xFF2563EB).withValues(alpha: 0.12),
-            Colors.transparent
-          ]).createShader(Rect.fromCircle(center: c1, radius: 160)));
-
-    final a2 = t * 2 * math.pi + math.pi;
-    final c2 = Offset(size.width * 0.85 + math.cos(a2) * 25,
-        size.height * 0.55 + math.sin(a2) * 20);
-    canvas.drawCircle(
-        c2,
         180,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF06B6D4).withValues(alpha: 0.08),
+            const Color(0xFF7B61FF).withValues(alpha: 0.2),
             Colors.transparent
-          ]).createShader(Rect.fromCircle(center: c2, radius: 180)));
+          ]).createShader(Rect.fromCircle(center: c1, radius: 180)));
+
+    final a2 = t * 2 * math.pi + math.pi;
+    final c2 = Offset(size.width * 0.1 + math.cos(a2) * 40,
+        size.height * 0.7 + math.sin(a2) * 35);
+    canvas.drawCircle(
+        c2,
+        200,
+        Paint()
+          ..shader = RadialGradient(colors: [
+            const Color(0xFF00D4FF).withValues(alpha: 0.15),
+            Colors.transparent
+          ]).createShader(Rect.fromCircle(center: c2, radius: 200)));
   }
 
   @override
-  bool shouldRepaint(_AmbientPainter old) => old.t != t;
+  bool shouldRepaint(_DarkOrbPainter old) => old.t != t;
+}
+
+// ─── Light mode background (matches ProfileView) ──────────────────────────────
+class _LightBackground extends StatelessWidget {
+  final Size size;
+  const _LightBackground({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(size: size, painter: _LightBgPainter());
+  }
+}
+
+class _LightBgPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawCircle(
+        Offset(size.width * 0.9, size.height * 0.05),
+        220,
+        Paint()
+          ..shader = RadialGradient(colors: [
+            const Color(0xFF00D4FF).withValues(alpha: 0.06),
+            Colors.transparent
+          ]).createShader(Rect.fromCircle(
+              center: Offset(size.width * 0.9, size.height * 0.05),
+              radius: 220)));
+    canvas.drawCircle(
+        Offset(size.width * 0.05, size.height * 0.85),
+        200,
+        Paint()
+          ..shader = RadialGradient(colors: [
+            const Color(0xFF7B61FF).withValues(alpha: 0.05),
+            Colors.transparent
+          ]).createShader(Rect.fromCircle(
+              center: Offset(size.width * 0.05, size.height * 0.85),
+              radius: 200)));
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
 }

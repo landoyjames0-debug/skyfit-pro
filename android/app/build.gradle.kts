@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-namespace = "com.example.skyfit_pro"
+    namespace = "com.example.skyfit_pro"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +20,8 @@ namespace = "com.example.skyfit_pro"
     }
 
     defaultConfig {
-applicationId = "com.example.skyfit_pro"
-        minSdk = flutter.minSdkVersion
+        applicationId = "com.example.skyfit_pro"
+        minSdk = 21  // Changed: google_sign_in requires minSdk 21+
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
@@ -28,7 +31,14 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
-  String _currentOtp = '';
+  // ─── OTP Security ──────────────────────────────────────────────────────────
+  // On web: store only the SHA-256 hash of the OTP, never the plaintext.
+  // This prevents the OTP from being visible in Flutter's widget state
+  // inspector or browser dev tools memory snapshots.
+  // On mobile: plaintext is fine since there's no browser dev tools exposure.
+  String? _otpHash; // web: SHA-256 hash of OTP
+  String? _currentOtp; // mobile only: plaintext OTP (null on web)
+
   bool _isLoading = false;
   bool _isSending = false;
   String? _errorMessage;
@@ -42,6 +52,29 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
   late Animation<double> _shakeAnim;
+
+  // ─── Hash helper ───────────────────────────────────────────────────────────
+  static String _hashOtp(String otp) {
+    final bytes = utf8.encode(otp);
+    return sha256.convert(bytes).toString();
+  }
+
+  void _storeOtp(String otp) {
+    if (kIsWeb) {
+      _otpHash = _hashOtp(otp);
+      _currentOtp = null; // never store plaintext on web
+    } else {
+      _currentOtp = otp;
+      _otpHash = null;
+    }
+  }
+
+  bool _verifyOtp(String entered) {
+    if (kIsWeb) {
+      return _otpHash != null && _hashOtp(entered) == _otpHash;
+    }
+    return _currentOtp != null && entered == _currentOtp;
+  }
 
   @override
   void initState() {
@@ -67,7 +100,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
     _slideController.forward();
 
     if (widget.generatedOtp != null) {
-      _currentOtp = widget.generatedOtp!;
+      _storeOtp(widget.generatedOtp!);
       _startTimer();
     } else {
       _sendOtp();
@@ -81,8 +114,12 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
   @override
   void dispose() {
     _timer?.cancel();
-    for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     _bgAnimController.dispose();
     _fadeController.dispose();
     _slideController.dispose();
@@ -95,9 +132,10 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
       _isSending = true;
       _errorMessage = null;
     });
-    _currentOtp = EmailService.generateOTP();
+    final otp = EmailService.generateOTP();
+    _storeOtp(otp); // store hash on web, plaintext on mobile
     final sent = await EmailService.sendOTP(
-        toName: widget.name, toEmail: widget.email, otpCode: _currentOtp);
+        toName: widget.name, toEmail: widget.email, otpCode: otp);
     setState(() => _isSending = false);
     if (sent) {
       _startTimer();
@@ -125,14 +163,15 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
   }
 
   void _clearOtpFields() {
-    for (final c in _controllers) c.clear();
+    for (final c in _controllers) {
+      c.clear();
+    }
     if (mounted) {
       setState(() {});
       _focusNodes[0].requestFocus();
     }
   }
 
-  // FIX: Responsive modal — constrained width + adaptive margin/padding
   Future<void> _showSuccessModal() async {
     final size = MediaQuery.of(context).size;
     final isSmall = size.width < 400;
@@ -264,7 +303,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
       _shakeController.forward(from: 0);
       return;
     }
-    if (entered == _currentOtp) {
+    if (_verifyOtp(entered)) {
       _timer?.cancel();
       setState(() => _isLoading = true);
       try {
@@ -295,7 +334,6 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
     final isSmall = size.height < 700;
 
     return Scaffold(
-      // FIX: theme-aware background
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: false,
       body: Stack(
@@ -445,7 +483,6 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Email display
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -469,10 +506,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                             fontWeight: FontWeight.w600))),
               ]),
             ),
-
             SizedBox(height: isSmall ? 20 : 28),
-
-            // Timer
             Center(
               child: Container(
                 padding:
@@ -514,7 +548,6 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                 ]),
               ),
             ),
-
             const SizedBox(height: 20),
             const Text('Enter 6-Digit Code',
                 textAlign: TextAlign.center,
@@ -523,9 +556,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                     fontSize: 13,
                     fontWeight: FontWeight.w500)),
             const SizedBox(height: 16),
-
             _buildOtpInputRow(),
-
             if (_errorMessage != null) ...[
               const SizedBox(height: 14),
               GestureDetector(
@@ -553,9 +584,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                 ),
               ),
             ],
-
             SizedBox(height: isSmall ? 16 : 24),
-
             GestureDetector(
               onTap: isDisabled ? null : _verify,
               child: AnimatedContainer(
@@ -601,9 +630,7 @@ class _OtpViewState extends State<OtpView> with TickerProviderStateMixin {
                 ),
               ),
             ),
-
             SizedBox(height: isSmall ? 16 : 20),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

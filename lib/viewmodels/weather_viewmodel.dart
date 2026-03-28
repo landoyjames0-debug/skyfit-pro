@@ -41,6 +41,7 @@ class WeatherViewModel extends ChangeNotifier {
                   emoji: s.emoji,
                   intensity: s.intensity,
                   videoUrl: s.videoAsset ?? '',
+                  videoAsset: s.videoAsset ?? '',
                   durationMinutes: s.durationMinutes,
                 ))
             .toList();

@@ -33,11 +33,13 @@ dependencies:
 
   # Image Picker & Cropper
   image_picker: ^1.1.2
-  # FIX: Added ^ so pub can pick compatible patch versions
   image_cropper: ^11.0.0
 
   # Video player for activity sample videos
   video_player: ^2.9.1
+
+  # Cryptography — used for OTP hashing on web (SHA-256)
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
@@ -47,7 +49,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # FIX: Declare all asset folders so Flutter can bundle them.
+  # Declare all asset folders so Flutter can bundle them.
   # Without this, any reference to assets/videos/*.mp4 crashes at runtime.
   assets:
     - assets/videos/

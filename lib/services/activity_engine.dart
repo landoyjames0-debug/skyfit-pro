@@ -22,25 +22,9 @@ class ActivitySuggestion {
 }
 
 /// Determines suggested activities from weather + user profile.
-///
-/// FIX 1 — Finer age tiers (was only <50 / >=50):
-///   • Youth    : age < 18
-///   • Young    : 18–34
-///   • Middle   : 35–49
-///   • Senior   : 50–64
-///   • Elderly  : 65+
-///
-/// FIX 2 — Randomised selection:
-///   Each preset method now holds a POOL of activities (4-6 items).
-///   [suggest] shuffles the pool with a fresh Random() and picks
-///   [_pickCount] items, so the same weather + profile gives a
-///   different combination on every fetch.
 class ActivityEngine {
-  // How many activities to show per fetch. Change to 3 if you prefer.
   static const int _pickCount = 3;
 
-  /// Returns [_pickCount] randomly-selected suggestions for the
-  /// current weather + user combination.
   static List<ActivitySuggestion> suggest({
     required WeatherModel weather,
     required UserModel user,
@@ -72,14 +56,12 @@ class ActivityEngine {
         break;
     }
 
-    // ── FIX 2: shuffle → pick ──────────────────────────────────────────────
     final rng = Random();
     final shuffled = List<ActivitySuggestion>.from(pool)..shuffle(rng);
     return shuffled.take(_pickCount).toList();
   }
 
-  // ── Age tier classifier ────────────────────────────────────────────────────
-  // FIX 1: five tiers instead of two so age changes actually matter.
+  // ── Age tier classifier ──────────────────────────────────────────────────
   static _AgeTier _ageTier(int age) {
     if (age < 18) return _AgeTier.youth;
     if (age < 35) return _AgeTier.young;
@@ -88,7 +70,7 @@ class ActivityEngine {
     return _AgeTier.elderly;
   }
 
-  // ── Weather classifier ─────────────────────────────────────────────────────
+  // ── Weather classifier ───────────────────────────────────────────────────
   static _WeatherClass _classify(WeatherModel w) {
     final condition = w.condition.toLowerCase();
     final temp = w.temperature;
@@ -96,16 +78,18 @@ class ActivityEngine {
     if (temp >= 35) return _WeatherClass.extremeHeat;
     if (condition == 'thunderstorm') return _WeatherClass.thunderstorm;
     if (condition == 'snow') return _WeatherClass.rainSnow;
-    if (condition == 'rain' || condition == 'drizzle')
+    if (condition == 'rain' || condition == 'drizzle') {
       return _WeatherClass.rainSnow;
+    }
     if (condition == 'mist' ||
         condition == 'fog' ||
         condition == 'haze' ||
         condition == 'smoke' ||
         condition == 'dust' ||
-        condition == 'sand') return _WeatherClass.mistFog;
+        condition == 'sand') {
+      return _WeatherClass.mistFog;
+    }
     if (condition == 'clear') return _WeatherClass.clearSunny;
-    if (condition == 'clouds') return _WeatherClass.cloudy;
     return _WeatherClass.cloudy;
   }
 
@@ -115,15 +99,12 @@ class ActivityEngine {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ACTIVITY POOLS — every method returns 5-6 items so the random pick
-  // produces genuine variety.  Intensity scales down with age tier.
+  // ACTIVITY POOLS
   // ══════════════════════════════════════════════════════════════════════════
 
-  // ── ☀️  Clear / Sunny ──────────────────────────────────────────────────────
+  // ── ☀️  Clear / Sunny ────────────────────────────────────────────────────
   static List<ActivitySuggestion> _clearPool(_AgeTier tier, bool isOverweight) {
     if (isOverweight) {
-      // All ages that are overweight get low-moderate, with slight
-      // duration reduction for older tiers.
       final duration = tier.index >= _AgeTier.senior.index ? 25 : 35;
       return [
         ActivitySuggestion(
@@ -458,7 +439,7 @@ class ActivityEngine {
     }
   }
 
-  // ── ⛅ Cloudy ──────────────────────────────────────────────────────────────
+  // ── ⛅ Cloudy ────────────────────────────────────────────────────────────
   static List<ActivitySuggestion> _cloudyPool(
       _AgeTier tier, bool isOverweight) {
     if (isOverweight) {
@@ -667,9 +648,8 @@ class ActivityEngine {
     }
   }
 
-  // ── 🌧️  Rain / Snow ───────────────────────────────────────────────────────
+  // ── 🌧️  Rain / Snow ──────────────────────────────────────────────────────
   static List<ActivitySuggestion> _rainPool(_AgeTier tier) {
-    // Base indoor pool shared by all — shuffle gives variety
     final base = [
       const ActivitySuggestion(
         name: 'Indoor Yoga',
@@ -709,7 +689,6 @@ class ActivityEngine {
       ),
     ];
 
-    // Age-specific additions injected into the pool
     switch (tier) {
       case _AgeTier.youth:
       case _AgeTier.young:
@@ -734,6 +713,7 @@ class ActivityEngine {
             videoAsset: 'assets/videos/hiit.mp4',
           ),
         ];
+
       case _AgeTier.middle:
         return [
           ...base,
@@ -755,6 +735,7 @@ class ActivityEngine {
             videoAsset: 'assets/videos/resistance_bands.mp4',
           ),
         ];
+
       case _AgeTier.senior:
       case _AgeTier.elderly:
         return [
@@ -807,7 +788,7 @@ class ActivityEngine {
     }
   }
 
-  // ── 🔥  Extreme Heat ───────────────────────────────────────────────────────
+  // ── 🔥  Extreme Heat ─────────────────────────────────────────────────────
   static List<ActivitySuggestion> _heatPool(_AgeTier tier, bool isOverweight) {
     if (isOverweight || tier.index >= _AgeTier.senior.index) {
       return [
@@ -866,7 +847,6 @@ class ActivityEngine {
       ];
     }
 
-    // Young / middle-aged normal weight
     return [
       const ActivitySuggestion(
         name: 'Early-Morning Run',
@@ -924,7 +904,7 @@ class ActivityEngine {
     ];
   }
 
-  // ── ⛈️  Thunderstorm ────────────────────────────────────────────────────────
+  // ── ⛈️  Thunderstorm ──────────────────────────────────────────────────────
   static List<ActivitySuggestion> _thunderPool(_AgeTier tier) {
     final base = [
       const ActivitySuggestion(
@@ -987,6 +967,7 @@ class ActivityEngine {
             videoAsset: 'assets/videos/hiit.mp4',
           ),
         ];
+
       case _AgeTier.middle:
         return [
           ...base,
@@ -1008,6 +989,7 @@ class ActivityEngine {
             videoAsset: 'assets/videos/resistance_bands.mp4',
           ),
         ];
+
       case _AgeTier.senior:
       case _AgeTier.elderly:
         return [
@@ -1034,7 +1016,7 @@ class ActivityEngine {
     }
   }
 
-  // ── 🌫️  Mist / Fog ─────────────────────────────────────────────────────────
+  // ── 🌫️  Mist / Fog ───────────────────────────────────────────────────────
   static List<ActivitySuggestion> _mistPool(_AgeTier tier) {
     final base = [
       const ActivitySuggestion(
@@ -1097,6 +1079,7 @@ class ActivityEngine {
             videoAsset: 'assets/videos/hiit.mp4',
           ),
         ];
+
       case _AgeTier.middle:
         return [
           ...base,
@@ -1118,6 +1101,7 @@ class ActivityEngine {
             videoAsset: 'assets/videos/resistance_bands.mp4',
           ),
         ];
+
       case _AgeTier.senior:
       case _AgeTier.elderly:
         return [
@@ -1179,9 +1163,6 @@ enum _WeatherClass {
   mistFog,
 }
 
-// FIX 1: Five age tiers instead of two.
-// Changing age across a tier boundary now produces a genuinely different
-// activity set; changing within a tier still randomises via the shuffle.
 enum _AgeTier {
   youth, // < 18
   young, // 18–34

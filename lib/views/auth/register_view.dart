@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../models/user_model.dart';
@@ -30,6 +34,12 @@ class _RegisterViewState extends State<RegisterView>
   bool _obscureConfirm = true;
   bool _isLoading = false;
   String _passwordText = '';
+
+  // ── Profile photo state ──────────────────────────────────────────────────
+  // Use bytes for web compatibility; path only used on mobile for upload
+  Uint8List? _profileImageBytes;
+  String? _profileImagePath; // non-web only
+  bool _isPickingPhoto = false;
 
   late AnimationController _bgAnimController;
   late AnimationController _fadeController;
@@ -114,7 +124,244 @@ class _RegisterViewState extends State<RegisterView>
     return 'Strong';
   }
 
-  // FIX: Responsive modal — constrained width + adaptive margin/padding
+  // ── PHOTO PICKER ─────────────────────────────────────────────────────────
+  Future<void> _showPhotoSourceSheet() async {
+    if (_isPickingPhoto) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      useRootNavigator: true,
+      builder: (sheetCtx) => Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D1117),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 40,
+                offset: const Offset(0, -8)),
+          ],
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 14),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                  colors: [Color(0xFF00D4FF), Color(0xFF7B61FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight),
+              boxShadow: [
+                BoxShadow(
+                    color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    spreadRadius: 1)
+              ],
+            ),
+            child: const Icon(Icons.camera_alt_rounded,
+                color: Colors.white, size: 24),
+          ),
+          const SizedBox(height: 12),
+          const Text('Add Profile Photo',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text('Optional — you can add one later',
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(children: [
+              // On web, camera is not supported — hide or show gallery only
+              if (!kIsWeb)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(sheetCtx).pop(ImageSource.camera),
+                    child: Container(
+                      height: 88,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          color:
+                              const Color(0xFF00D4FF).withValues(alpha: 0.08),
+                          border: Border.all(
+                              color: const Color(0xFF00D4FF)
+                                  .withValues(alpha: 0.3),
+                              width: 1.2)),
+                      child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF00D4FF)
+                                      .withValues(alpha: 0.15)),
+                              child: const Icon(Icons.camera_alt_rounded,
+                                  color: Color(0xFF00D4FF), size: 24),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text('Camera',
+                                style: TextStyle(
+                                    color: Color(0xFF00D4FF),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700)),
+                          ]),
+                    ),
+                  ),
+                ),
+              if (!kIsWeb) const SizedBox(width: 12),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(sheetCtx).pop(ImageSource.gallery),
+                  child: Container(
+                    height: 88,
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: const Color(0xFF7B61FF).withValues(alpha: 0.08),
+                        border: Border.all(
+                            color:
+                                const Color(0xFF7B61FF).withValues(alpha: 0.3),
+                            width: 1.2)),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF7B61FF)
+                                    .withValues(alpha: 0.15)),
+                            child: const Icon(Icons.photo_library_rounded,
+                                color: Color(0xFF7B61FF), size: 24),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text('Gallery',
+                              style: TextStyle(
+                                  color: Color(0xFF7B61FF),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700)),
+                        ]),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GestureDetector(
+              onTap: () => Navigator.of(sheetCtx).pop(),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: Colors.white.withValues(alpha: 0.05),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.1))),
+                child: Center(
+                    child: Text('Skip for Now',
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600))),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ]),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+    await _pickPhoto(source);
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    setState(() => _isPickingPhoto = true);
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+          source: source, imageQuality: 90, maxWidth: 1024, maxHeight: 1024);
+      if (picked == null || !mounted) return;
+
+      Uint8List? finalBytes;
+      String? finalPath;
+
+      if (kIsWeb) {
+        // ── Web: read bytes directly, skip ImageCropper (not supported on web)
+        finalBytes = await picked.readAsBytes();
+      } else {
+        // ── Mobile: crop first, then read bytes
+        final cropped = await ImageCropper().cropImage(
+          sourcePath: picked.path,
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+          compressQuality: 85,
+          compressFormat: ImageCompressFormat.jpg,
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Crop Photo',
+              toolbarColor: const Color(0xFF050810),
+              toolbarWidgetColor: Colors.white,
+              activeControlsWidgetColor: const Color(0xFF00D4FF),
+              backgroundColor: const Color(0xFF050810),
+              lockAspectRatio: true,
+            ),
+            IOSUiSettings(
+                title: 'Crop Photo',
+                aspectRatioLockEnabled: true,
+                resetAspectRatioEnabled: false),
+          ],
+        );
+        if (cropped == null || !mounted) return;
+        finalPath = cropped.path;
+        // Read bytes for preview; also keep path for upload
+        finalBytes = await cropped.readAsBytes();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _profileImageBytes = finalBytes;
+        _profileImagePath = finalPath; // null on web
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            'Could not access ${source == ImageSource.camera ? 'camera' : 'gallery'}. Check permissions.'),
+        backgroundColor: const Color(0xFF1A1F35),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ));
+    } finally {
+      if (mounted) setState(() => _isPickingPhoto = false);
+    }
+  }
+
+  String _getInitials(String name) {
+    if (name.trim().isEmpty) return '?';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
   Future<void> _showRegisteredModal(BuildContext ctx) async {
     final size = MediaQuery.of(ctx).size;
     final isSmall = size.width < 400;
@@ -264,6 +511,8 @@ class _RegisterViewState extends State<RegisterView>
     final weight = double.parse(_weightCtrl.text);
     final gender = _gender;
     final fitnessGoal = _fitnessGoal;
+    final photoBytes = _profileImageBytes;
+    final photoPath = _profileImagePath;
 
     final otpCode = EmailService.generateOTP();
     final sent = await EmailService.sendOTP(
@@ -293,6 +542,7 @@ class _RegisterViewState extends State<RegisterView>
 
     if (mounted) {
       final ctx = context;
+      if (!ctx.mounted) return;
       Navigator.push(
         ctx,
         MaterialPageRoute(
@@ -301,16 +551,19 @@ class _RegisterViewState extends State<RegisterView>
             name: name,
             generatedOtp: otpCode,
             onVerified: () async {
-              if (!ctx.mounted) return;
               final authVM = ctx.read<AuthViewModel>();
               final userVM = ctx.read<UserViewModel>();
+
+              // Register and auto-sign-in
               final success = await authVM.registerWithEmail(
                 email,
                 password,
                 name: name,
               );
               if (!success) return;
-              final uid = authVM.currentUser?.uid ?? '';
+
+              // Create profile
+              final uid = authVM.currentUser!.uid;
               final newUser = UserModel(
                 uid: uid,
                 email: email,
@@ -321,10 +574,8 @@ class _RegisterViewState extends State<RegisterView>
                 fitnessGoal: fitnessGoal,
               );
               await userVM.createProfile(newUser);
-              if (ctx.mounted) {
-                Navigator.of(ctx).popUntil((route) => route.isFirst);
-                await _showRegisteredModal(ctx);
-              }
+
+              // Let OTP view handle navigation to Home
             },
           ),
         ),
@@ -347,7 +598,6 @@ class _RegisterViewState extends State<RegisterView>
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      // FIX: theme-aware background
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       resizeToAvoidBottomInset: false,
       body: Stack(
@@ -506,6 +756,7 @@ class _RegisterViewState extends State<RegisterView>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ── Badge ────────────────────────────────────────────────────
             Center(
               child: Container(
                 padding:
@@ -528,7 +779,15 @@ class _RegisterViewState extends State<RegisterView>
                 ]),
               ),
             ),
+            const SizedBox(height: 20),
+
+            // ── Profile Photo Picker ─────────────────────────────────────
+            _buildPhotoPickerRow(),
+            const SizedBox(height: 20),
+            Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
             const SizedBox(height: 18),
+
+            // ── Fields ───────────────────────────────────────────────────
             LayoutBuilder(builder: (context, constraints) {
               final isWide = constraints.maxWidth > 400;
               if (isWide) {
@@ -650,6 +909,8 @@ class _RegisterViewState extends State<RegisterView>
               ]);
             }),
             const SizedBox(height: 12),
+
+            // ── Password ─────────────────────────────────────────────────
             TextFormField(
               controller: _passCtrl,
               obscureText: _obscurePass,
@@ -673,6 +934,8 @@ class _RegisterViewState extends State<RegisterView>
             const SizedBox(height: 10),
             _buildStrengthBar(strength),
             const SizedBox(height: 12),
+
+            // ── Confirm Password ─────────────────────────────────────────
             TextFormField(
               controller: _confirmCtrl,
               obscureText: _obscureConfirm,
@@ -693,6 +956,7 @@ class _RegisterViewState extends State<RegisterView>
               validator: (v) =>
                   v != _passwordText ? 'Passwords do not match' : null,
             ),
+
             if (authVM.errorMessage != null) ...[
               const SizedBox(height: 14),
               GestureDetector(
@@ -721,6 +985,8 @@ class _RegisterViewState extends State<RegisterView>
               ),
             ],
             const SizedBox(height: 20),
+
+            // ── Create Account button ─────────────────────────────────────
             GestureDetector(
               onTapDown: (_) {
                 if (!_isLoading) _buttonPressController.forward();
@@ -777,6 +1043,8 @@ class _RegisterViewState extends State<RegisterView>
               ),
             ),
             const SizedBox(height: 12),
+
+            // ── Google Sign Up ────────────────────────────────────────────
             GestureDetector(
               onTap: _isLoading ? null : _signInWithGoogle,
               child: Container(
@@ -812,6 +1080,156 @@ class _RegisterViewState extends State<RegisterView>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Photo Picker Row ────────────────────────────────────────────────────
+  Widget _buildPhotoPickerRow() {
+    final nameText = _nameCtrl.text;
+    final initials = nameText.isNotEmpty ? _getInitials(nameText) : '?';
+    final hasPhoto = _profileImageBytes != null;
+
+    return GestureDetector(
+      onTap: _isPickingPhoto ? null : _showPhotoSourceSheet,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white.withValues(alpha: 0.04),
+          border: Border.all(
+              color: const Color(0xFF00D4FF).withValues(alpha: 0.2), width: 1),
+        ),
+        child: Row(children: [
+          // Avatar preview
+          Stack(children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF00D4FF), Color(0xFF7B61FF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight),
+                boxShadow: [
+                  BoxShadow(
+                      color: const Color(0xFF00D4FF).withValues(alpha: 0.3),
+                      blurRadius: 14,
+                      spreadRadius: 1)
+                ],
+              ),
+              // ✅ Web-safe: use Image.memory instead of Image.file
+              child: hasPhoto
+                  ? ClipOval(
+                      child: Image.memory(
+                        _profileImageBytes!,
+                        fit: BoxFit.cover,
+                        width: 72,
+                        height: 72,
+                      ),
+                    )
+                  : Center(
+                      child: Text(initials,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800))),
+            ),
+            if (_isPickingPhoto)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.5)),
+                  child: const Center(
+                    child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2.5, color: Colors.white)),
+                  ),
+                ),
+              ),
+            // Camera badge
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isPickingPhoto
+                        ? Colors.white.withValues(alpha: 0.3)
+                        : const Color(0xFF00D4FF),
+                    border:
+                        Border.all(color: const Color(0xFF0D1117), width: 2)),
+                child: Icon(
+                    _isPickingPhoto
+                        ? Icons.hourglass_top_rounded
+                        : (hasPhoto ? Icons.edit_rounded : Icons.add_rounded),
+                    color: Colors.white,
+                    size: 11),
+              ),
+            ),
+          ]),
+          const SizedBox(width: 16),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                hasPhoto ? 'Photo Selected' : 'Profile Photo',
+                style: TextStyle(
+                    color: hasPhoto ? const Color(0xFF4ADE80) : Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                hasPhoto ? 'Tap to change it' : 'Optional — tap to add a photo',
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+              ),
+              if (hasPhoto) ...[
+                const SizedBox(height: 8),
+                Row(children: [
+                  const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF4ADE80), size: 12),
+                  const SizedBox(width: 4),
+                  Text('Ready to upload',
+                      style: TextStyle(
+                          color: const Color(0xFF4ADE80).withValues(alpha: 0.8),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ],
+            ]),
+          ),
+          // Action button
+          if (!_isPickingPhoto)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: hasPhoto
+                      ? const Color(0xFF4ADE80).withValues(alpha: 0.1)
+                      : const Color(0xFF00D4FF).withValues(alpha: 0.1),
+                  border: Border.all(
+                      color: hasPhoto
+                          ? const Color(0xFF4ADE80).withValues(alpha: 0.3)
+                          : const Color(0xFF00D4FF).withValues(alpha: 0.3))),
+              child: Text(
+                hasPhoto ? 'Change' : 'Add',
+                style: TextStyle(
+                    color: hasPhoto
+                        ? const Color(0xFF4ADE80)
+                        : const Color(0xFF00D4FF),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700),
+              ),
+            ),
+        ]),
       ),
     );
   }
@@ -937,6 +1355,7 @@ class _RegisterViewState extends State<RegisterView>
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: _inputDeco(label, icon),
       validator: validator,
+      onChanged: label == 'Full Name' ? (_) => setState(() {}) : null,
     );
   }
 

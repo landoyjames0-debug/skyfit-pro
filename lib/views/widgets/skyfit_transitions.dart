@@ -334,8 +334,4 @@ class SkyFitRouteFactory {
       settings: RouteSettings(name: routeName, arguments: settings.arguments),
     );
   }
-
-  /// Returns the first registered route name as the root fallback,
-  /// or '/splash' if nothing is registered yet.
-  static String _resolveRootRoute() => '/splash';
 }

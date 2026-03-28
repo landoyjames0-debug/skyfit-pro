@@ -5,26 +5,64 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="SkyFit Pro - Your AI Fitness Companion">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="skyfit_pro">
+  <meta name="apple-mobile-web-app-title" content="SkyFit Pro">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>skyfit_pro</title>
+  <title>SkyFit Pro</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Google Sign-In -->
-  <meta name="google-signin-client_id" content="1055112886693-8jqao3rnopb73vv0ljjat83rdk279b07.apps.googleusercontent.com">
+  <!--
+    TODO: Replace YOUR_WEB_CLIENT_ID below with your actual OAuth 2.0 Web Client ID.
+    Find it in: Firebase Console → Project Settings → General → Your apps → Web app
+    OR Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs
+  -->
+  <meta name="google-signin-client_id"
+    content="1055112886693-REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com">
 </head>
 <body>
-  <!-- Google Sign-In Script -->
+  <!-- Google Identity Services — required for Google Sign-In on web -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!--
+    Firebase SDK (compat versions — required for FlutterFire web)
+    Pin to a specific version to avoid unexpected breaking changes.
+    Current: 10.12.0
+  -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!--
+    Uncomment when Firebase Storage is enabled on your project (requires Blaze plan):
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  -->
+
+  <!-- Firebase Initialization -->
+  <script>
+    // NOTE: These values are safe to expose in client-side code.
+    // Firebase security is enforced by Firestore/Storage Security Rules,
+    // not by keeping these keys secret.
+    const firebaseConfig = {
+      apiKey:            "AIzaSyBlc9GB09PgFr-_KvBoP40t-C5WD6E5Ajw",
+      authDomain:        "skyfit-pro.firebaseapp.com",
+      projectId:         "skyfit-pro",
+      storageBucket:     "skyfit-pro.firebasestorage.app",
+      messagingSenderId: "1055112886693",
+      appId:             "1:1055112886693:web:2c0bca633ab4b0ae44504c"
+    };
+
+    // Guard against double-initialization (e.g. hot reload in dev)
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+  </script>
 
   <script src="flutter_bootstrap.js" async></script>
 </body>
