@@ -34,13 +34,13 @@ class _T {
   static Color cardBg(bool dark) =>
       dark ? const Color(0xFF0D1117) : Colors.white;
   static Color cardBorder(bool dark) =>
-      dark ? Colors.white.withValues(alpha: 0.09) : const Color(0xFFDDE4ED);
+      dark ? Colors.white.withOpacity(0.09) : const Color(0xFFDDE4ED);
   static Color inputFill(bool dark) =>
-      dark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F9FC);
+      dark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F9FC);
   static Color inputBorder(bool dark) =>
-      dark ? Colors.white.withValues(alpha: 0.09) : const Color(0xFFCDD5DF);
+      dark ? Colors.white.withOpacity(0.09) : const Color(0xFFCDD5DF);
   static Color divider(bool dark) =>
-      dark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
+      dark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
 
   static const Color cyan = Color(0xFF00D4FF);
   static const Color violet = Color(0xFF7B61FF);
@@ -49,7 +49,7 @@ class _T {
   static const Color amber = Color(0xFFFFB547);
 }
 
-// ─── Session Timer Chip (local copy for ProfileView) ─────────────────────────
+// ─── Session Timer Chip ───────────────────────────────────────────────────────
 class _SessionTimerChip extends StatefulWidget {
   final int initialSeconds;
   final VoidCallback onTimeout;
@@ -75,7 +75,6 @@ class _SessionTimerChipState extends State<_SessionTimerChip> {
     _startTimer();
   }
 
-  // ── Resets timer on user interaction ──────────────────────────────────────
   void resetTimer() {
     if (!mounted) return;
     setState(() => _remaining = widget.initialSeconds);
@@ -120,20 +119,23 @@ class _SessionTimerChipState extends State<_SessionTimerChip> {
       duration: const Duration(milliseconds: 400),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.1),
+        color: c.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: c.withValues(alpha: 0.3), width: 1),
+        border: Border.all(color: c.withOpacity(0.3), width: 1),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.timer_outlined, color: c, size: 11),
         const SizedBox(width: 5),
-        Text(_label,
-            style: TextStyle(
-                color: c,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                fontFeatures: const [FontFeature.tabularFigures()])),
+        Text(
+          _label,
+          style: TextStyle(
+            color: c,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ]),
     );
   }
@@ -156,7 +158,7 @@ Future<bool> _showConfirmModal(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Dismiss',
-    barrierColor: Colors.black.withValues(alpha: 0.65),
+    barrierColor: Colors.black.withOpacity(0.65),
     transitionDuration: const Duration(milliseconds: 320),
     transitionBuilder: (ctx, anim, _, child) => ScaleTransition(
       scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
@@ -172,15 +174,14 @@ Future<bool> _showConfirmModal(
           decoration: BoxDecoration(
             color: _T.cardBg(dark),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(
-                color: iconColor.withValues(alpha: 0.25), width: 1.5),
+            border: Border.all(color: iconColor.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
-                  color: iconColor.withValues(alpha: 0.1),
+                  color: iconColor.withOpacity(0.1),
                   blurRadius: 40,
                   spreadRadius: 2),
               BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? 0.55 : 0.12),
+                  color: Colors.black.withOpacity(dark ? 0.55 : 0.12),
                   blurRadius: 40,
                   offset: const Offset(0, 20)),
             ],
@@ -193,9 +194,9 @@ Future<bool> _showConfirmModal(
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: iconColor.withValues(alpha: dark ? 0.12 : 0.08),
-                  border: Border.all(
-                      color: iconColor.withValues(alpha: 0.3), width: 1.5),
+                  color: iconColor.withOpacity(dark ? 0.12 : 0.08),
+                  border:
+                      Border.all(color: iconColor.withOpacity(0.3), width: 1.5),
                 ),
                 child: Icon(icon, color: iconColor, size: 28),
               ),
@@ -215,7 +216,7 @@ Future<bool> _showConfirmModal(
                       height: 1.5)),
               if (extraContent != null) ...[
                 const SizedBox(height: 16),
-                extraContent
+                extraContent,
               ],
               const SizedBox(height: 24),
               Row(children: [
@@ -247,11 +248,11 @@ Future<bool> _showConfirmModal(
                           borderRadius: BorderRadius.circular(12),
                           gradient: LinearGradient(colors: [
                             confirmColor,
-                            confirmColor.withValues(alpha: 0.75)
+                            confirmColor.withOpacity(0.75),
                           ]),
                           boxShadow: [
                             BoxShadow(
-                                color: confirmColor.withValues(alpha: 0.3),
+                                color: confirmColor.withOpacity(0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4))
                           ]),
@@ -304,7 +305,6 @@ class _ProfileViewState extends State<ProfileView>
   static const int _maxBiometricAttempts = 3;
   static const int _sessionSeconds = 300;
 
-  // ── Session timer key — used to reset the timer on user interaction ────────
   final _sessionTimerKey = GlobalKey<_SessionTimerChipState>();
 
   late final AnimationController _bgAnimController;
@@ -357,7 +357,7 @@ class _ProfileViewState extends State<ProfileView>
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.8),
+      barrierColor: Colors.black.withOpacity(0.8),
       transitionDuration: const Duration(milliseconds: 400),
       transitionBuilder: (context, anim, _, child) => ScaleTransition(
           scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
@@ -372,15 +372,14 @@ class _ProfileViewState extends State<ProfileView>
             decoration: BoxDecoration(
               color: _T.cardBg(dark),
               borderRadius: BorderRadius.circular(26),
-              border:
-                  Border.all(color: _T.red.withValues(alpha: 0.3), width: 1.5),
+              border: Border.all(color: _T.red.withOpacity(0.3), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                    color: _T.red.withValues(alpha: 0.12),
+                    color: _T.red.withOpacity(0.12),
                     blurRadius: 40,
                     spreadRadius: 2),
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: dark ? 0.55 : 0.12),
+                    color: Colors.black.withOpacity(dark ? 0.55 : 0.12),
                     blurRadius: 40,
                     offset: const Offset(0, 20)),
               ],
@@ -391,9 +390,9 @@ class _ProfileViewState extends State<ProfileView>
                   height: 72,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _T.red.withValues(alpha: 0.1),
+                      color: _T.red.withOpacity(0.1),
                       border: Border.all(
-                          color: _T.red.withValues(alpha: 0.3), width: 1.5)),
+                          color: _T.red.withOpacity(0.3), width: 1.5)),
                   child: const Icon(Icons.lock_clock_rounded,
                       color: _T.red, size: 32)),
               const SizedBox(height: 20),
@@ -420,7 +419,7 @@ class _ProfileViewState extends State<ProfileView>
                       color: _T.red,
                       boxShadow: [
                         BoxShadow(
-                            color: _T.red.withValues(alpha: 0.3),
+                            color: _T.red.withOpacity(0.3),
                             blurRadius: 16,
                             offset: const Offset(0, 4))
                       ]),
@@ -607,8 +606,8 @@ class _ProfileViewState extends State<ProfileView>
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: _T.cyan.withValues(alpha: dark ? 0.06 : 0.04),
-          border: Border.all(color: _T.cyan.withValues(alpha: 0.2))),
+          color: _T.cyan.withOpacity(dark ? 0.06 : 0.04),
+          border: Border.all(color: _T.cyan.withOpacity(0.2))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Changes to be saved',
             style: TextStyle(
@@ -784,28 +783,23 @@ class _ProfileViewState extends State<ProfileView>
 
     return Scaffold(
       backgroundColor: _T.scaffoldBg(dark),
-      body: Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (_) => _sessionTimerKey.currentState?.resetTimer(),
-        onPointerMove: (_) => _sessionTimerKey.currentState?.resetTimer(),
-        child: Stack(children: [
-          if (dark)
-            _AnimatedBackground(controller: _bgAnimController, size: size)
-          else
-            _LightBackground(size: size),
-          SafeArea(
-            child: FadeTransition(
-              opacity: _fadeAnim,
-              child: Form(
-                key: _formKey,
-                child: isWide
-                    ? _buildWebLayout(context, user, authVM, dark, size)
-                    : _buildMobileLayout(context, user, authVM, dark),
-              ),
+      body: Stack(children: [
+        if (dark)
+          _AnimatedBackground(controller: _bgAnimController, size: size)
+        else
+          _LightBackground(size: size),
+        SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: Form(
+              key: _formKey,
+              child: isWide
+                  ? _buildWebLayout(context, user, authVM, dark, size)
+                  : _buildMobileLayout(context, user, authVM, dark),
             ),
           ),
-        ]),
-      ),
+        ),
+      ]),
     );
   }
 
@@ -815,41 +809,46 @@ class _ProfileViewState extends State<ProfileView>
     return Column(children: [
       _buildTopBar(context, authVM, dark, isWeb: true),
       Expanded(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(32, 28, 32, 40),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1100),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildWebHero(user, dark),
-                    const SizedBox(height: 24),
-                    IntrinsicHeight(
-                      child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(flex: 5, child: _buildEditCard(dark)),
-                            const SizedBox(width: 20),
-                            Expanded(
-                                flex: 4,
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      _buildStatsCard(user, dark),
-                                      const SizedBox(height: 16),
-                                      _buildAccountCard(user, dark),
-                                      const SizedBox(height: 16),
-                                      _buildSecurityCard(dark),
-                                      const SizedBox(height: 16),
-                                      _buildPreferencesCard(authVM, dark),
-                                    ])),
-                          ]),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildSignOutButton(dark),
-                  ]),
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => _sessionTimerKey.currentState?.resetTimer(),
+          onPointerMove: (_) => _sessionTimerKey.currentState?.resetTimer(),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(32, 28, 32, 40),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildWebHero(user, dark),
+                      const SizedBox(height: 24),
+                      IntrinsicHeight(
+                        child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(flex: 5, child: _buildEditCard(dark)),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                  flex: 4,
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        _buildStatsCard(user, dark),
+                                        const SizedBox(height: 16),
+                                        _buildAccountCard(user, dark),
+                                        const SizedBox(height: 16),
+                                        _buildSecurityCard(dark),
+                                        const SizedBox(height: 16),
+                                        _buildPreferencesCard(authVM, dark),
+                                      ])),
+                            ]),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildSignOutButton(dark),
+                    ]),
+              ),
             ),
           ),
         ),
@@ -859,42 +858,48 @@ class _ProfileViewState extends State<ProfileView>
 
   Widget _buildMobileLayout(
       BuildContext context, user, AuthViewModel authVM, bool dark) {
-    return CustomScrollView(
-      physics: const ClampingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-            child: _buildTopBar(context, authVM, dark, isWeb: false)),
-        SliverToBoxAdapter(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: _buildMobileHero(user, dark))),
-        SliverToBoxAdapter(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildStatsRow(user, dark))),
-        SliverToBoxAdapter(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildEditCard(dark))),
-        SliverToBoxAdapter(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildSecurityCard(dark))),
-        SliverToBoxAdapter(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildPreferencesCard(authVM, dark))),
-        SliverToBoxAdapter(
-            child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                child: _buildSignOutButton(dark))),
-        SliverToBoxAdapter(
-            child: SizedBox(height: MediaQuery.of(context).viewInsets.bottom)),
-      ],
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _sessionTimerKey.currentState?.resetTimer(),
+      onPointerMove: (_) => _sessionTimerKey.currentState?.resetTimer(),
+      child: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+              child: _buildTopBar(context, authVM, dark, isWeb: false)),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _buildMobileHero(user, dark))),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _buildStatsRow(user, dark))),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _buildEditCard(dark))),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _buildSecurityCard(dark))),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _buildPreferencesCard(authVM, dark))),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                  child: _buildSignOutButton(dark))),
+          SliverToBoxAdapter(
+              child:
+                  SizedBox(height: MediaQuery.of(context).viewInsets.bottom)),
+        ],
+      ),
     );
   }
 
-  // ── Top bar (with session timer) ───────────────────────────────────────────
+  // ── Top bar ────────────────────────────────────────────────────────────────
   Widget _buildTopBar(BuildContext context, AuthViewModel authVM, bool dark,
       {required bool isWeb}) {
     return Container(
@@ -902,12 +907,11 @@ class _ProfileViewState extends State<ProfileView>
       height: 68,
       decoration: BoxDecoration(
         color: dark
-            ? Colors.black.withValues(alpha: 0.30)
-            : Colors.white.withValues(alpha: 0.85),
+            ? Colors.black.withOpacity(0.30)
+            : Colors.white.withOpacity(0.85),
         border: Border(bottom: BorderSide(color: _T.divider(dark), width: 1)),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        // Back button
         GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Container(
@@ -922,7 +926,6 @@ class _ProfileViewState extends State<ProfileView>
           ),
         ),
         const SizedBox(width: 14),
-        // Brand icon
         Container(
           width: 38,
           height: 38,
@@ -936,7 +939,6 @@ class _ProfileViewState extends State<ProfileView>
               color: Colors.white, size: 18),
         ),
         const SizedBox(width: 12),
-        // Title
         Expanded(
           child: ShaderMask(
             shaderCallback: (b) =>
@@ -953,7 +955,6 @@ class _ProfileViewState extends State<ProfileView>
             ),
           ),
         ),
-        // ── Session Timer ──
         _SessionTimerChip(
           key: _sessionTimerKey,
           initialSeconds: _sessionSeconds,
@@ -974,7 +975,7 @@ class _ProfileViewState extends State<ProfileView>
         border: Border.all(color: _T.cardBorder(dark)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? 0.3 : 0.06),
+              color: Colors.black.withOpacity(dark ? 0.3 : 0.06),
               blurRadius: 20,
               offset: const Offset(0, 6))
         ],
@@ -991,7 +992,7 @@ class _ProfileViewState extends State<ProfileView>
                   gradient: const LinearGradient(colors: [_T.cyan, _T.violet]),
                   boxShadow: [
                     BoxShadow(
-                        color: _T.cyan.withValues(alpha: 0.3),
+                        color: _T.cyan.withOpacity(0.3),
                         blurRadius: 20,
                         spreadRadius: 2)
                   ]),
@@ -1029,9 +1030,9 @@ class _ProfileViewState extends State<ProfileView>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                  color: _T.green.withValues(alpha: 0.1),
+                  color: _T.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _T.green.withValues(alpha: 0.3))),
+                  border: Border.all(color: _T.green.withOpacity(0.3))),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.flag_outlined, color: _T.green, size: 12),
                 const SizedBox(width: 5),
@@ -1061,8 +1062,8 @@ class _ProfileViewState extends State<ProfileView>
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: color.withValues(alpha: dark ? 0.08 : 0.06),
-          border: Border.all(color: color.withValues(alpha: 0.2))),
+          color: color.withOpacity(dark ? 0.08 : 0.06),
+          border: Border.all(color: color.withOpacity(0.2))),
       child: Column(children: [
         Text(value,
             style: TextStyle(
@@ -1088,7 +1089,7 @@ class _ProfileViewState extends State<ProfileView>
           border: Border.all(color: _T.cardBorder(dark)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? 0.25 : 0.06),
+                color: Colors.black.withOpacity(dark ? 0.25 : 0.06),
                 blurRadius: 16,
                 offset: const Offset(0, 6))
           ]),
@@ -1104,7 +1105,7 @@ class _ProfileViewState extends State<ProfileView>
                   gradient: const LinearGradient(colors: [_T.cyan, _T.violet]),
                   boxShadow: [
                     BoxShadow(
-                        color: _T.cyan.withValues(alpha: 0.3),
+                        color: _T.cyan.withOpacity(0.3),
                         blurRadius: 16,
                         spreadRadius: 1)
                   ]),
@@ -1143,9 +1144,9 @@ class _ProfileViewState extends State<ProfileView>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                  color: _T.green.withValues(alpha: 0.1),
+                  color: _T.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _T.green.withValues(alpha: 0.25))),
+                  border: Border.all(color: _T.green.withOpacity(0.25))),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.flag_outlined, color: _T.green, size: 11),
                 const SizedBox(width: 4),
@@ -1184,7 +1185,7 @@ class _ProfileViewState extends State<ProfileView>
                         height: size * 0.35,
                         child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white.withValues(alpha: 0.6))));
+                            color: Colors.white.withOpacity(0.6))));
               },
               errorBuilder: (_, __, ___) => _initialsWidget(size, initials)));
     }
@@ -1213,9 +1214,13 @@ class _ProfileViewState extends State<ProfileView>
       {
         'label': 'Weight',
         'value': _formatWeight(user?.weightKg),
-        'color': _T.amber
+        'color': _T.amber,
       },
-      {'label': 'Gender', 'value': user?.gender ?? '—', 'color': _T.violet},
+      {
+        'label': 'Gender',
+        'value': user?.gender ?? '—',
+        'color': _T.violet,
+      },
     ];
     return Row(
       children: stats.asMap().entries.map((e) {
@@ -1230,7 +1235,7 @@ class _ProfileViewState extends State<ProfileView>
                 border: Border.all(color: _T.cardBorder(dark)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: dark ? 0.2 : 0.04),
+                      color: Colors.black.withOpacity(dark ? 0.2 : 0.04),
                       blurRadius: 12,
                       offset: const Offset(0, 4))
                 ]),
@@ -1312,9 +1317,9 @@ class _ProfileViewState extends State<ProfileView>
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      color: _T.cyan.withValues(alpha: dark ? 0.04 : 0.03),
+                      color: _T.cyan.withOpacity(dark ? 0.04 : 0.03),
                       border: Border.all(
-                          color: _T.cyan.withValues(alpha: 0.15), width: 1)),
+                          color: _T.cyan.withOpacity(0.15), width: 1)),
                   child: Row(children: [
                     Stack(children: [
                       Container(
@@ -1328,7 +1333,7 @@ class _ProfileViewState extends State<ProfileView>
                                 end: Alignment.bottomRight),
                             boxShadow: [
                               BoxShadow(
-                                  color: _T.cyan.withValues(alpha: 0.3),
+                                  color: _T.cyan.withOpacity(0.3),
                                   blurRadius: 10,
                                   spreadRadius: 1)
                             ]),
@@ -1342,8 +1347,7 @@ class _ProfileViewState extends State<ProfileView>
                             child: Container(
                                 decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color:
-                                        Colors.black.withValues(alpha: 0.45)),
+                                    color: Colors.black.withOpacity(0.45)),
                                 child: const Center(
                                     child: SizedBox(
                                         width: 18,
@@ -1400,9 +1404,9 @@ class _ProfileViewState extends State<ProfileView>
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            color: _T.cyan.withValues(alpha: 0.1),
-                            border: Border.all(
-                                color: _T.cyan.withValues(alpha: 0.3))),
+                            color: _T.cyan.withOpacity(0.1),
+                            border:
+                                Border.all(color: _T.cyan.withOpacity(0.3))),
                         child: const Text('Change',
                             style: TextStyle(
                                 color: _T.cyan,
@@ -1456,7 +1460,7 @@ class _ProfileViewState extends State<ProfileView>
                     'Lose Weight',
                     'Build Muscle',
                     'Stay Active',
-                    'Improve Endurance'
+                    'Improve Endurance',
                   ],
                   onChanged: (v) => setState(() => _fitnessGoal = v)),
               const SizedBox(height: 18),
@@ -1469,14 +1473,16 @@ class _ProfileViewState extends State<ProfileView>
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       gradient: _isSaving
-                          ? LinearGradient(
-                              colors: [_T.textMuted(dark), _T.textMuted(dark)])
+                          ? LinearGradient(colors: [
+                              _T.textMuted(dark),
+                              _T.textMuted(dark),
+                            ])
                           : const LinearGradient(colors: [_T.cyan, _T.violet]),
                       boxShadow: _isSaving
                           ? []
                           : [
                               BoxShadow(
-                                  color: _T.cyan.withValues(alpha: 0.28),
+                                  color: _T.cyan.withOpacity(0.28),
                                   blurRadius: 14,
                                   offset: const Offset(0, 5))
                             ]),
@@ -1505,18 +1511,21 @@ class _ProfileViewState extends State<ProfileView>
   }
 
   // ── Dropdown helper ────────────────────────────────────────────────────────
-  Widget _buildDropdown(bool dark,
-      {required String label,
-      required IconData icon,
-      required String? value,
-      required List<String> items,
-      required void Function(String?) onChanged}) {
+  Widget _buildDropdown(
+    bool dark, {
+    required String label,
+    required IconData icon,
+    required String? value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      // FIX: replaced deprecated `value:` with `initialValue:`
+      initialValue: value,
       style: TextStyle(color: _T.textPrimary(dark), fontSize: 14),
       dropdownColor: _T.cardBg(dark),
       icon: Icon(Icons.keyboard_arrow_down_rounded,
-          color: _T.textMuted(dark).withValues(alpha: 0.6)),
+          color: _T.textMuted(dark).withOpacity(0.6)),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: _T.textSecondary(dark), fontSize: 13),
@@ -1572,18 +1581,18 @@ class _ProfileViewState extends State<ProfileView>
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: biometricActive
-                      ? _T.cyan.withValues(alpha: dark ? 0.07 : 0.05)
+                      ? _T.cyan.withOpacity(dark ? 0.07 : 0.05)
                       : _T.inputFill(dark),
                   border: Border.all(
                       color: biometricActive
-                          ? _T.cyan.withValues(alpha: 0.25)
+                          ? _T.cyan.withOpacity(0.25)
                           : _T.inputBorder(dark))),
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
                       color: (biometricActive ? _T.cyan : _T.textMuted(dark))
-                          .withValues(alpha: 0.1),
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: Icon(Icons.fingerprint_rounded,
                       color: biometricDisabled
@@ -1618,7 +1627,7 @@ class _ProfileViewState extends State<ProfileView>
                             color: biometricDisabled
                                 ? _T.textMuted(dark)
                                 : biometricActive
-                                    ? _T.cyan.withValues(alpha: 0.8)
+                                    ? _T.cyan.withOpacity(0.8)
                                     : _T.textSecondary(dark),
                             fontSize: 11),
                       ),
@@ -1641,7 +1650,7 @@ class _ProfileViewState extends State<ProfileView>
                         boxShadow: biometricActive
                             ? [
                                 BoxShadow(
-                                    color: _T.cyan.withValues(alpha: 0.35),
+                                    color: _T.cyan.withOpacity(0.35),
                                     blurRadius: 8)
                               ]
                             : []),
@@ -1660,7 +1669,7 @@ class _ProfileViewState extends State<ProfileView>
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
+                                    color: Colors.black.withOpacity(0.15),
                                     blurRadius: 4)
                               ])),
                     ),
@@ -1684,18 +1693,16 @@ class _ProfileViewState extends State<ProfileView>
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: dark
-                      ? _T.cyan.withValues(alpha: 0.07)
-                      : _T.inputFill(dark),
+                  color: dark ? _T.cyan.withOpacity(0.07) : _T.inputFill(dark),
                   border: Border.all(
                       color: dark
-                          ? _T.cyan.withValues(alpha: 0.25)
+                          ? _T.cyan.withOpacity(0.25)
                           : _T.inputBorder(dark))),
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                      color: _T.violet.withValues(alpha: 0.1),
+                      color: _T.violet.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: Icon(
                       dark
@@ -1733,7 +1740,7 @@ class _ProfileViewState extends State<ProfileView>
                       boxShadow: dark
                           ? [
                               BoxShadow(
-                                  color: _T.violet.withValues(alpha: 0.35),
+                                  color: _T.violet.withOpacity(0.35),
                                   blurRadius: 8)
                             ]
                           : []),
@@ -1751,7 +1758,7 @@ class _ProfileViewState extends State<ProfileView>
                             color: Colors.white,
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
+                                  color: Colors.black.withOpacity(0.15),
                                   blurRadius: 4)
                             ])),
                   ),
@@ -1770,7 +1777,7 @@ class _ProfileViewState extends State<ProfileView>
               Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                      color: _T.green.withValues(alpha: 0.1),
+                      color: _T.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.info_outline_rounded,
                       color: _T.green, size: 22)),
@@ -1793,10 +1800,9 @@ class _ProfileViewState extends State<ProfileView>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                    color: _T.green.withValues(alpha: 0.1),
+                    color: _T.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: _T.green.withValues(alpha: 0.25))),
+                    border: Border.all(color: _T.green.withOpacity(0.25))),
                 child: const Text('Latest',
                     style: TextStyle(
                         color: _T.green,
@@ -1816,9 +1822,8 @@ class _ProfileViewState extends State<ProfileView>
         height: 52,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: _T.red.withValues(alpha: dark ? 0.08 : 0.05),
-            border:
-                Border.all(color: _T.red.withValues(alpha: 0.35), width: 1.5)),
+            color: _T.red.withOpacity(dark ? 0.08 : 0.05),
+            border: Border.all(color: _T.red.withOpacity(0.35), width: 1.5)),
         child:
             const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.logout_rounded, color: _T.red, size: 18),
@@ -1842,7 +1847,7 @@ class _ProfileViewState extends State<ProfileView>
           border: Border.all(color: _T.cardBorder(dark)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? 0.25 : 0.06),
+                color: Colors.black.withOpacity(dark ? 0.25 : 0.06),
                 blurRadius: 16,
                 offset: const Offset(0, 6))
           ]),
@@ -1855,9 +1860,9 @@ class _ProfileViewState extends State<ProfileView>
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.2))),
+            border: Border.all(color: color.withOpacity(0.2))),
         child: Icon(icon, color: color, size: 17),
       ),
       const SizedBox(width: 10),
@@ -1927,7 +1932,7 @@ class _PhotoSourceSheet extends StatelessWidget {
           border: Border.all(color: _T.cardBorder(dark), width: 1.2),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: dark ? 0.5 : 0.1),
+                color: Colors.black.withOpacity(dark ? 0.5 : 0.1),
                 blurRadius: 40,
                 offset: const Offset(0, -8))
           ]),
@@ -1937,7 +1942,7 @@ class _PhotoSourceSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-                color: _T.textMuted(dark).withValues(alpha: 0.4),
+                color: _T.textMuted(dark).withOpacity(0.4),
                 borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 20),
         Container(
@@ -2011,26 +2016,26 @@ class _PhotoSourceSheet extends StatelessWidget {
     );
   }
 
-  Widget _sourceButton(
-      {required String label,
-      required IconData icon,
-      required Color color,
-      required bool dark,
-      required VoidCallback onTap}) {
+  Widget _sourceButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool dark,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 88,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            color: color.withValues(alpha: dark ? 0.08 : 0.06),
-            border:
-                Border.all(color: color.withValues(alpha: 0.3), width: 1.2)),
+            color: color.withOpacity(dark ? 0.08 : 0.06),
+            border: Border.all(color: color.withOpacity(0.3), width: 1.2)),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  shape: BoxShape.circle, color: color.withValues(alpha: 0.15)),
+                  shape: BoxShape.circle, color: color.withOpacity(0.15)),
               child: Icon(icon, color: color, size: 24)),
           const SizedBox(height: 6),
           Text(label,
@@ -2071,8 +2076,8 @@ class _DarkOrbPainter extends CustomPainter {
         180,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF7B61FF).withValues(alpha: 0.2),
-            Colors.transparent
+            const Color(0xFF7B61FF).withOpacity(0.2),
+            Colors.transparent,
           ]).createShader(Rect.fromCircle(center: c1, radius: 180)));
     final a2 = t * 2 * math.pi + math.pi;
     final c2 = Offset(size.width * 0.1 + math.cos(a2) * 40,
@@ -2082,8 +2087,8 @@ class _DarkOrbPainter extends CustomPainter {
         200,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF00D4FF).withValues(alpha: 0.15),
-            Colors.transparent
+            const Color(0xFF00D4FF).withOpacity(0.15),
+            Colors.transparent,
           ]).createShader(Rect.fromCircle(center: c2, radius: 200)));
   }
 
@@ -2109,8 +2114,8 @@ class _LightBgPainter extends CustomPainter {
         220,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF00D4FF).withValues(alpha: 0.06),
-            Colors.transparent
+            const Color(0xFF00D4FF).withOpacity(0.06),
+            Colors.transparent,
           ]).createShader(Rect.fromCircle(
               center: Offset(size.width * 0.9, size.height * 0.05),
               radius: 220)));
@@ -2119,8 +2124,8 @@ class _LightBgPainter extends CustomPainter {
         200,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF7B61FF).withValues(alpha: 0.05),
-            Colors.transparent
+            const Color(0xFF7B61FF).withOpacity(0.05),
+            Colors.transparent,
           ]).createShader(Rect.fromCircle(
               center: Offset(size.width * 0.05, size.height * 0.85),
               radius: 200)));
