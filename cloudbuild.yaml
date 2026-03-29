@@ -21,17 +21,17 @@ steps:
       - '--build-arg'
       - 'GOOGLE_WEB_CLIENT_ID=$_GOOGLE_WEB_CLIENT_ID'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/skyfit-pro:$COMMIT_SHA'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:$COMMIT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/skyfit-pro:latest'
+      - 'asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:latest'
       - '.'
 
-  # Step 2: Push to Google Container Registry
+  # Step 2: Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/skyfit-pro:$COMMIT_SHA']
+    args: ['push', 'asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:$COMMIT_SHA']
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/skyfit-pro:latest']
+    args: ['push', 'asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:latest']
 
   # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -40,7 +40,7 @@ steps:
       - 'run'
       - 'deploy'
       - 'skyfit-pro'
-      - '--image=gcr.io/$PROJECT_ID/skyfit-pro:$COMMIT_SHA'
+      - '--image=asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:$COMMIT_SHA'
       - '--region=asia-east1'
       - '--platform=managed'
       - '--allow-unauthenticated'
@@ -50,8 +50,8 @@ steps:
       - '--max-instances=10'
 
 images:
-  - 'gcr.io/$PROJECT_ID/skyfit-pro:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/skyfit-pro:latest'
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:$COMMIT_SHA'
+  - 'asia-east1-docker.pkg.dev/$PROJECT_ID/skyfit-pro/skyfit-pro:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
