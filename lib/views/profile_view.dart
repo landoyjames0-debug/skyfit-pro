@@ -1499,7 +1499,7 @@ class _ProfileViewState extends State<ProfileView>
       required List<String> items,
       required void Function(String?) onChanged}) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       style: TextStyle(color: _T.textPrimary(dark), fontSize: 14),
       dropdownColor: _T.cardBg(dark),
       icon: Icon(Icons.keyboard_arrow_down_rounded,

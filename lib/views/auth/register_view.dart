@@ -1237,7 +1237,7 @@ class _RegisterViewState extends State<RegisterView>
   Widget _buildDropdown(String label, IconData icon, String? value,
       List<String> items, void Function(String?) onChanged) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       dropdownColor: const Color(0xFF0D1117),
       style: const TextStyle(color: Colors.white, fontSize: 14),
       icon: Icon(Icons.keyboard_arrow_down_rounded,
