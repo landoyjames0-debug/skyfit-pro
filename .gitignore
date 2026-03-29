@@ -24,4 +24,4 @@ run.sh
 firebase_options.dart
 
 # Dependencies
-pubspec.lock
+pubspec.lockandroid/app/google-services.json
