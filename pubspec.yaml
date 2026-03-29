@@ -31,9 +31,9 @@ dependencies:
   # HTTP
   http: ^1.2.2
 
-  # Image Picker & Cropper
+# Image Picker & Cropper
   image_picker: ^1.1.2
-  image_cropper: ^11.0.0
+  image_cropper: ^7.0.0
 
   # Video player for activity sample videos
   video_player: ^2.9.1
