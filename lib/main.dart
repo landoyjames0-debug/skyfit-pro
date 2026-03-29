@@ -47,6 +47,18 @@ void main() async {
   runApp(const SkyFitProApp());
 }
 
+// Hides scrollbars across the entire app (Flutter web)
+class NoScrollbarBehavior extends ScrollBehavior {
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child; // removes scrollbar entirely
+  }
+}
+
 class SkyFitProApp extends StatelessWidget {
   const SkyFitProApp({super.key});
 
@@ -62,6 +74,7 @@ class SkyFitProApp extends StatelessWidget {
         builder: (context, authVM, child) => MaterialApp(
           title: 'SkyFit Pro',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: NoScrollbarBehavior(), // 👈 added
           theme: _lightTheme,
           darkTheme: _darkTheme,
           themeMode: authVM.themeMode,
