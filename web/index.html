@@ -1,17 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <style>
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; -ms-overflow-style: none; }
+  </style>
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="SkyFit Pro - Your AI Fitness Companion">
 
-  <!-- iOS meta tags & icons -->
+  <!-- Responsive viewport — ensures correct scaling on all devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA theme color (Android Chrome toolbar) -->
+  <meta name="theme-color" content="#000000">
+
+  <!-- PWA / iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="SkyFit Pro">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-startup-image" href="icons/Icon-512.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>

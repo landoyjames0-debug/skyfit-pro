@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../../services/activity_engine.dart';
 
@@ -19,6 +20,18 @@ class ActivityCard extends StatelessWidget {
   }
 
   void _openVideoDialog(BuildContext context) {
+    if (kIsWeb) {
+      final url = activity.videoUrl;
+      if (url == null || url.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No video available for ${activity.name}')),
+        );
+        return;
+      }
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      return;
+    }
+
     final videoAsset = activity.videoAsset;
     if (videoAsset == null || videoAsset.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,21 +130,7 @@ class _VideoDialogState extends State<_VideoDialog> {
 
   Future<void> _initVideo() async {
     try {
-      if (kIsWeb) {
-        // On web, use the Google Drive preview URL if available,
-        // otherwise fall back to the asset path.
-        final url = widget.videoUrl ?? widget.videoAsset;
-        _controller = VideoPlayerController.networkUrl(
-          Uri.parse(url),
-          httpHeaders: const {
-            'Accept': 'video/mp4,video/*',
-          },
-        );
-      } else {
-        // On mobile: asset loading works natively.
-        _controller = VideoPlayerController.asset(widget.videoAsset);
-      }
-
+      _controller = VideoPlayerController.asset(widget.videoAsset);
       await _controller.initialize();
       _controller.addListener(_onVideoUpdate);
       _controller.setLooping(true);
@@ -284,21 +283,11 @@ class _VideoDialogState extends State<_VideoDialog> {
               color: Colors.white38, size: 40),
           const SizedBox(height: 10),
           Text(
-            kIsWeb
-                ? 'Video not available on web preview'
-                : 'Could not load video',
+            'Could not load video',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
           ),
-          if (kIsWeb) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Videos work on the installed app',
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3), fontSize: 11),
-            ),
-          ],
         ],
       ),
     );
