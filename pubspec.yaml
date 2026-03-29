@@ -19,7 +19,7 @@ dependencies:
   provider: ^6.1.2
   http: ^1.2.2
   image_picker: ^1.1.2
-  image_cropper: ^7.0.0
+  image_cropper: ^11.0.0
   video_player: ^2.9.1
   crypto: ^3.0.3
 
@@ -32,3 +32,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/videos/
+    - assets/images/
