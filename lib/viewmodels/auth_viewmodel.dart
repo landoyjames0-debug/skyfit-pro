@@ -29,7 +29,6 @@ class AuthViewModel extends ChangeNotifier {
 
   // ─── Initialization ────────────────────────────────────────────────────────
   Future<void> _init() async {
-    // Load saved theme before auth resolves so UI doesn't flash
     final saved = await _storage.getThemeMode();
     _themeMode = switch (saved) {
       'dark' => ThemeMode.dark,
@@ -40,7 +39,6 @@ class AuthViewModel extends ChangeNotifier {
 
     bool authResolved = false;
 
-    // Timeout fallback in case Firebase hangs (e.g. no internet on startup)
     Future.delayed(const Duration(seconds: 5), () {
       if (!authResolved) {
         _isLoading = false;
@@ -104,7 +102,6 @@ class AuthViewModel extends ChangeNotifier {
         name: name,
       );
       await _repo.saveUserToFirestore(cred.user!);
-      // Auto sign in after registration
       await _repo.loginWithEmail(email: email, password: password);
       _isLoading = false;
       notifyListeners();
@@ -125,7 +122,6 @@ class AuthViewModel extends ChangeNotifier {
     try {
       final cred = await _repo.signInWithGoogle();
       if (cred == null) {
-        // User cancelled the Google sign-in sheet
         _isLoading = false;
         notifyListeners();
         return false;
@@ -197,11 +193,10 @@ class AuthViewModel extends ChangeNotifier {
 
   // ─── Firebase Error Parser ─────────────────────────────────────────────────
   String _parseAuthError(String error) {
-    // Firebase returns these as e.code — match exactly first
-    const Map<String, String> _errorMap = {
+    // FIX: renamed _errorMap → errorMap (no leading underscore for locals)
+    const Map<String, String> errorMap = {
       'user-not-found': 'No account found with this email.',
       'wrong-password': 'Incorrect password.',
-      // Newer Firebase SDK merges user-not-found + wrong-password into this
       'invalid-credential': 'Invalid email or password.',
       'invalid-email': 'Please enter a valid email address.',
       'email-already-in-use': 'An account with this email already exists.',
@@ -214,8 +209,7 @@ class AuthViewModel extends ChangeNotifier {
           'This credential is already linked to another account.',
     };
 
-    // Try exact match first (works when passing e.code directly)
-    for (final entry in _errorMap.entries) {
+    for (final entry in errorMap.entries) {
       if (error == entry.key || error.contains(entry.key)) {
         return entry.value;
       }

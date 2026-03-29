@@ -36,7 +36,6 @@ class _RegisterViewState extends State<RegisterView>
   String _passwordText = '';
 
   // ── Profile photo state ──────────────────────────────────────────────────
-  // Use bytes for web compatibility; path only used on mobile for upload
   Uint8List? _profileImageBytes;
   String? _profileImagePath; // non-web only
   bool _isPickingPhoto = false;
@@ -189,7 +188,6 @@ class _RegisterViewState extends State<RegisterView>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
-              // On web, camera is not supported — hide or show gallery only
               if (!kIsWeb)
                 Expanded(
                   child: GestureDetector(
@@ -305,10 +303,8 @@ class _RegisterViewState extends State<RegisterView>
       String? finalPath;
 
       if (kIsWeb) {
-        // ── Web: read bytes directly, skip ImageCropper (not supported on web)
         finalBytes = await picked.readAsBytes();
       } else {
-        // ── Mobile: crop first, then read bytes
         final cropped = await ImageCropper().cropImage(
           sourcePath: picked.path,
           aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
@@ -331,14 +327,13 @@ class _RegisterViewState extends State<RegisterView>
         );
         if (cropped == null || !mounted) return;
         finalPath = cropped.path;
-        // Read bytes for preview; also keep path for upload
         finalBytes = await cropped.readAsBytes();
       }
 
       if (!mounted) return;
       setState(() {
         _profileImageBytes = finalBytes;
-        _profileImagePath = finalPath; // null on web
+        _profileImagePath = finalPath;
       });
     } catch (e) {
       if (!mounted) return;
@@ -362,142 +357,6 @@ class _RegisterViewState extends State<RegisterView>
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
-  Future<void> _showRegisteredModal(BuildContext ctx) async {
-    final size = MediaQuery.of(ctx).size;
-    final isSmall = size.width < 400;
-    await showGeneralDialog(
-      context: ctx,
-      barrierDismissible: false,
-      barrierColor: Colors.black.withValues(alpha: 0.7),
-      transitionDuration: const Duration(milliseconds: 400),
-      transitionBuilder: (context, anim, _, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
-          child: FadeTransition(opacity: anim, child: child),
-        );
-      },
-      pageBuilder: (context, _, __) => Center(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            margin: EdgeInsets.symmetric(
-              horizontal: isSmall ? 20 : 32,
-              vertical: 24,
-            ),
-            constraints: const BoxConstraints(maxWidth: 400),
-            padding: EdgeInsets.all(isSmall ? 24 : 32),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D1117),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(
-                  color: const Color(0xFF4ADE80).withValues(alpha: 0.3),
-                  width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                    color: const Color(0xFF4ADE80).withValues(alpha: 0.12),
-                    blurRadius: 40,
-                    spreadRadius: 4),
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    blurRadius: 40,
-                    offset: const Offset(0, 20)),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF4ADE80), Color(0xFF00D4FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                          color: const Color(0xFF4ADE80).withValues(alpha: 0.4),
-                          blurRadius: 24,
-                          spreadRadius: 2),
-                    ],
-                  ),
-                  child: const Icon(Icons.how_to_reg_rounded,
-                      color: Colors.white, size: 40),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Account Created!',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Welcome to SkyFit Pro! Your account has been set up successfully.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 14,
-                      height: 1.5),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4ADE80).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: const Color(0xFF4ADE80).withValues(alpha: 0.2)),
-                  ),
-                  child: const Text(
-                    'Please sign in to continue.',
-                    style: TextStyle(
-                        color: Color(0xFF4ADE80),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Container(
-                  width: double.infinity,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF4ADE80), Color(0xFF00D4FF)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                          color: const Color(0xFF4ADE80).withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6)),
-                    ],
-                  ),
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      'Go to Sign In',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _register() async {
     if (!mounted) return;
     FocusScope.of(context).unfocus();
@@ -511,8 +370,6 @@ class _RegisterViewState extends State<RegisterView>
     final weight = double.parse(_weightCtrl.text);
     final gender = _gender;
     final fitnessGoal = _fitnessGoal;
-    final photoBytes = _profileImageBytes;
-    final photoPath = _profileImagePath;
 
     final otpCode = EmailService.generateOTP();
     final sent = await EmailService.sendOTP(
@@ -554,7 +411,6 @@ class _RegisterViewState extends State<RegisterView>
               final authVM = ctx.read<AuthViewModel>();
               final userVM = ctx.read<UserViewModel>();
 
-              // Register and auto-sign-in
               final success = await authVM.registerWithEmail(
                 email,
                 password,
@@ -562,7 +418,6 @@ class _RegisterViewState extends State<RegisterView>
               );
               if (!success) return;
 
-              // Create profile
               final uid = authVM.currentUser!.uid;
               final newUser = UserModel(
                 uid: uid,
@@ -574,8 +429,6 @@ class _RegisterViewState extends State<RegisterView>
                 fitnessGoal: fitnessGoal,
               );
               await userVM.createProfile(newUser);
-
-              // Let OTP view handle navigation to Home
             },
           ),
         ),
@@ -1101,7 +954,6 @@ class _RegisterViewState extends State<RegisterView>
               color: const Color(0xFF00D4FF).withValues(alpha: 0.2), width: 1),
         ),
         child: Row(children: [
-          // Avatar preview
           Stack(children: [
             Container(
               width: 72,
@@ -1119,7 +971,6 @@ class _RegisterViewState extends State<RegisterView>
                       spreadRadius: 1)
                 ],
               ),
-              // ✅ Web-safe: use Image.memory instead of Image.file
               child: hasPhoto
                   ? ClipOval(
                       child: Image.memory(
@@ -1151,7 +1002,6 @@ class _RegisterViewState extends State<RegisterView>
                   ),
                 ),
               ),
-            // Camera badge
             Positioned(
               bottom: 0,
               right: 0,
@@ -1206,7 +1056,6 @@ class _RegisterViewState extends State<RegisterView>
               ],
             ]),
           ),
-          // Action button
           if (!_isPickingPhoto)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1234,10 +1083,11 @@ class _RegisterViewState extends State<RegisterView>
     );
   }
 
+  // FIX: value: → initialValue: (deprecated after Flutter 3.33)
   Widget _buildDropdown(String label, IconData icon, String? value,
       List<String> items, void Function(String?) onChanged) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       dropdownColor: const Color(0xFF0D1117),
       style: const TextStyle(color: Colors.white, fontSize: 14),
       icon: Icon(Icons.keyboard_arrow_down_rounded,

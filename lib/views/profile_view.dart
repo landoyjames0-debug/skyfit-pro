@@ -34,13 +34,13 @@ class _T {
   static Color cardBg(bool dark) =>
       dark ? const Color(0xFF0D1117) : Colors.white;
   static Color cardBorder(bool dark) =>
-      dark ? Colors.white.withOpacity(0.09) : const Color(0xFFDDE4ED);
+      dark ? Colors.white.withValues(alpha: 0.09) : const Color(0xFFDDE4ED);
   static Color inputFill(bool dark) =>
-      dark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F9FC);
+      dark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F9FC);
   static Color inputBorder(bool dark) =>
-      dark ? Colors.white.withOpacity(0.09) : const Color(0xFFCDD5DF);
+      dark ? Colors.white.withValues(alpha: 0.09) : const Color(0xFFCDD5DF);
   static Color divider(bool dark) =>
-      dark ? Colors.white.withOpacity(0.06) : const Color(0xFFE2E8F0);
+      dark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0);
 
   static const Color cyan = Color(0xFF00D4FF);
   static const Color violet = Color(0xFF7B61FF);
@@ -119,9 +119,9 @@ class _SessionTimerChipState extends State<_SessionTimerChip> {
       duration: const Duration(milliseconds: 400),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: c.withOpacity(0.1),
+        color: c.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: c.withOpacity(0.3), width: 1),
+        border: Border.all(color: c.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.timer_outlined, color: c, size: 11),
@@ -158,7 +158,7 @@ Future<bool> _showConfirmModal(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Dismiss',
-    barrierColor: Colors.black.withOpacity(0.65),
+    barrierColor: Colors.black.withValues(alpha: 0.65),
     transitionDuration: const Duration(milliseconds: 320),
     transitionBuilder: (ctx, anim, _, child) => ScaleTransition(
       scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
@@ -174,14 +174,15 @@ Future<bool> _showConfirmModal(
           decoration: BoxDecoration(
             color: _T.cardBg(dark),
             borderRadius: BorderRadius.circular(26),
-            border: Border.all(color: iconColor.withOpacity(0.25), width: 1.5),
+            border: Border.all(
+                color: iconColor.withValues(alpha: 0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   blurRadius: 40,
                   spreadRadius: 2),
               BoxShadow(
-                  color: Colors.black.withOpacity(dark ? 0.55 : 0.12),
+                  color: Colors.black.withValues(alpha: dark ? 0.55 : 0.12),
                   blurRadius: 40,
                   offset: const Offset(0, 20)),
             ],
@@ -194,9 +195,9 @@ Future<bool> _showConfirmModal(
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: iconColor.withOpacity(dark ? 0.12 : 0.08),
-                  border:
-                      Border.all(color: iconColor.withOpacity(0.3), width: 1.5),
+                  color: iconColor.withValues(alpha: dark ? 0.12 : 0.08),
+                  border: Border.all(
+                      color: iconColor.withValues(alpha: 0.3), width: 1.5),
                 ),
                 child: Icon(icon, color: iconColor, size: 28),
               ),
@@ -248,11 +249,11 @@ Future<bool> _showConfirmModal(
                           borderRadius: BorderRadius.circular(12),
                           gradient: LinearGradient(colors: [
                             confirmColor,
-                            confirmColor.withOpacity(0.75),
+                            confirmColor.withValues(alpha: 0.75),
                           ]),
                           boxShadow: [
                             BoxShadow(
-                                color: confirmColor.withOpacity(0.3),
+                                color: confirmColor.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4))
                           ]),
@@ -357,7 +358,7 @@ class _ProfileViewState extends State<ProfileView>
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black.withOpacity(0.8),
+      barrierColor: Colors.black.withValues(alpha: 0.8),
       transitionDuration: const Duration(milliseconds: 400),
       transitionBuilder: (context, anim, _, child) => ScaleTransition(
           scale: CurvedAnimation(parent: anim, curve: Curves.easeOutBack),
@@ -372,14 +373,15 @@ class _ProfileViewState extends State<ProfileView>
             decoration: BoxDecoration(
               color: _T.cardBg(dark),
               borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: _T.red.withOpacity(0.3), width: 1.5),
+              border:
+                  Border.all(color: _T.red.withValues(alpha: 0.3), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                    color: _T.red.withOpacity(0.12),
+                    color: _T.red.withValues(alpha: 0.12),
                     blurRadius: 40,
                     spreadRadius: 2),
                 BoxShadow(
-                    color: Colors.black.withOpacity(dark ? 0.55 : 0.12),
+                    color: Colors.black.withValues(alpha: dark ? 0.55 : 0.12),
                     blurRadius: 40,
                     offset: const Offset(0, 20)),
               ],
@@ -390,9 +392,9 @@ class _ProfileViewState extends State<ProfileView>
                   height: 72,
                   decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _T.red.withOpacity(0.1),
+                      color: _T.red.withValues(alpha: 0.1),
                       border: Border.all(
-                          color: _T.red.withOpacity(0.3), width: 1.5)),
+                          color: _T.red.withValues(alpha: 0.3), width: 1.5)),
                   child: const Icon(Icons.lock_clock_rounded,
                       color: _T.red, size: 32)),
               const SizedBox(height: 20),
@@ -419,7 +421,7 @@ class _ProfileViewState extends State<ProfileView>
                       color: _T.red,
                       boxShadow: [
                         BoxShadow(
-                            color: _T.red.withOpacity(0.3),
+                            color: _T.red.withValues(alpha: 0.3),
                             blurRadius: 16,
                             offset: const Offset(0, 4))
                       ]),
@@ -606,8 +608,8 @@ class _ProfileViewState extends State<ProfileView>
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: _T.cyan.withOpacity(dark ? 0.06 : 0.04),
-          border: Border.all(color: _T.cyan.withOpacity(0.2))),
+          color: _T.cyan.withValues(alpha: dark ? 0.06 : 0.04),
+          border: Border.all(color: _T.cyan.withValues(alpha: 0.2))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Changes to be saved',
             style: TextStyle(
@@ -907,8 +909,8 @@ class _ProfileViewState extends State<ProfileView>
       height: 68,
       decoration: BoxDecoration(
         color: dark
-            ? Colors.black.withOpacity(0.30)
-            : Colors.white.withOpacity(0.85),
+            ? Colors.black.withValues(alpha: 0.30)
+            : Colors.white.withValues(alpha: 0.85),
         border: Border(bottom: BorderSide(color: _T.divider(dark), width: 1)),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -975,7 +977,7 @@ class _ProfileViewState extends State<ProfileView>
         border: Border.all(color: _T.cardBorder(dark)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(dark ? 0.3 : 0.06),
+              color: Colors.black.withValues(alpha: dark ? 0.3 : 0.06),
               blurRadius: 20,
               offset: const Offset(0, 6))
         ],
@@ -992,7 +994,7 @@ class _ProfileViewState extends State<ProfileView>
                   gradient: const LinearGradient(colors: [_T.cyan, _T.violet]),
                   boxShadow: [
                     BoxShadow(
-                        color: _T.cyan.withOpacity(0.3),
+                        color: _T.cyan.withValues(alpha: 0.3),
                         blurRadius: 20,
                         spreadRadius: 2)
                   ]),
@@ -1030,9 +1032,9 @@ class _ProfileViewState extends State<ProfileView>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                  color: _T.green.withOpacity(0.1),
+                  color: _T.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _T.green.withOpacity(0.3))),
+                  border: Border.all(color: _T.green.withValues(alpha: 0.3))),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.flag_outlined, color: _T.green, size: 12),
                 const SizedBox(width: 5),
@@ -1062,8 +1064,8 @@ class _ProfileViewState extends State<ProfileView>
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: color.withOpacity(dark ? 0.08 : 0.06),
-          border: Border.all(color: color.withOpacity(0.2))),
+          color: color.withValues(alpha: dark ? 0.08 : 0.06),
+          border: Border.all(color: color.withValues(alpha: 0.2))),
       child: Column(children: [
         Text(value,
             style: TextStyle(
@@ -1089,7 +1091,7 @@ class _ProfileViewState extends State<ProfileView>
           border: Border.all(color: _T.cardBorder(dark)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(dark ? 0.25 : 0.06),
+                color: Colors.black.withValues(alpha: dark ? 0.25 : 0.06),
                 blurRadius: 16,
                 offset: const Offset(0, 6))
           ]),
@@ -1105,7 +1107,7 @@ class _ProfileViewState extends State<ProfileView>
                   gradient: const LinearGradient(colors: [_T.cyan, _T.violet]),
                   boxShadow: [
                     BoxShadow(
-                        color: _T.cyan.withOpacity(0.3),
+                        color: _T.cyan.withValues(alpha: 0.3),
                         blurRadius: 16,
                         spreadRadius: 1)
                   ]),
@@ -1144,9 +1146,9 @@ class _ProfileViewState extends State<ProfileView>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                  color: _T.green.withOpacity(0.1),
+                  color: _T.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _T.green.withOpacity(0.25))),
+                  border: Border.all(color: _T.green.withValues(alpha: 0.25))),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.flag_outlined, color: _T.green, size: 11),
                 const SizedBox(width: 4),
@@ -1185,7 +1187,7 @@ class _ProfileViewState extends State<ProfileView>
                         height: size * 0.35,
                         child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white.withOpacity(0.6))));
+                            color: Colors.white.withValues(alpha: 0.6))));
               },
               errorBuilder: (_, __, ___) => _initialsWidget(size, initials)));
     }
@@ -1235,7 +1237,7 @@ class _ProfileViewState extends State<ProfileView>
                 border: Border.all(color: _T.cardBorder(dark)),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(dark ? 0.2 : 0.04),
+                      color: Colors.black.withValues(alpha: dark ? 0.2 : 0.04),
                       blurRadius: 12,
                       offset: const Offset(0, 4))
                 ]),
@@ -1317,9 +1319,9 @@ class _ProfileViewState extends State<ProfileView>
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      color: _T.cyan.withOpacity(dark ? 0.04 : 0.03),
+                      color: _T.cyan.withValues(alpha: dark ? 0.04 : 0.03),
                       border: Border.all(
-                          color: _T.cyan.withOpacity(0.15), width: 1)),
+                          color: _T.cyan.withValues(alpha: 0.15), width: 1)),
                   child: Row(children: [
                     Stack(children: [
                       Container(
@@ -1333,7 +1335,7 @@ class _ProfileViewState extends State<ProfileView>
                                 end: Alignment.bottomRight),
                             boxShadow: [
                               BoxShadow(
-                                  color: _T.cyan.withOpacity(0.3),
+                                  color: _T.cyan.withValues(alpha: 0.3),
                                   blurRadius: 10,
                                   spreadRadius: 1)
                             ]),
@@ -1347,7 +1349,8 @@ class _ProfileViewState extends State<ProfileView>
                             child: Container(
                                 decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.black.withOpacity(0.45)),
+                                    color:
+                                        Colors.black.withValues(alpha: 0.45)),
                                 child: const Center(
                                     child: SizedBox(
                                         width: 18,
@@ -1404,9 +1407,9 @@ class _ProfileViewState extends State<ProfileView>
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(20),
-                            color: _T.cyan.withOpacity(0.1),
-                            border:
-                                Border.all(color: _T.cyan.withOpacity(0.3))),
+                            color: _T.cyan.withValues(alpha: 0.1),
+                            border: Border.all(
+                                color: _T.cyan.withValues(alpha: 0.3))),
                         child: const Text('Change',
                             style: TextStyle(
                                 color: _T.cyan,
@@ -1482,7 +1485,7 @@ class _ProfileViewState extends State<ProfileView>
                           ? []
                           : [
                               BoxShadow(
-                                  color: _T.cyan.withOpacity(0.28),
+                                  color: _T.cyan.withValues(alpha: 0.28),
                                   blurRadius: 14,
                                   offset: const Offset(0, 5))
                             ]),
@@ -1525,7 +1528,7 @@ class _ProfileViewState extends State<ProfileView>
       style: TextStyle(color: _T.textPrimary(dark), fontSize: 14),
       dropdownColor: _T.cardBg(dark),
       icon: Icon(Icons.keyboard_arrow_down_rounded,
-          color: _T.textMuted(dark).withOpacity(0.6)),
+          color: _T.textMuted(dark).withValues(alpha: 0.6)),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: _T.textSecondary(dark), fontSize: 13),
@@ -1581,18 +1584,18 @@ class _ProfileViewState extends State<ProfileView>
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: biometricActive
-                      ? _T.cyan.withOpacity(dark ? 0.07 : 0.05)
+                      ? _T.cyan.withValues(alpha: dark ? 0.07 : 0.05)
                       : _T.inputFill(dark),
                   border: Border.all(
                       color: biometricActive
-                          ? _T.cyan.withOpacity(0.25)
+                          ? _T.cyan.withValues(alpha: 0.25)
                           : _T.inputBorder(dark))),
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
                       color: (biometricActive ? _T.cyan : _T.textMuted(dark))
-                          .withOpacity(0.1),
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: Icon(Icons.fingerprint_rounded,
                       color: biometricDisabled
@@ -1627,7 +1630,7 @@ class _ProfileViewState extends State<ProfileView>
                             color: biometricDisabled
                                 ? _T.textMuted(dark)
                                 : biometricActive
-                                    ? _T.cyan.withOpacity(0.8)
+                                    ? _T.cyan.withValues(alpha: 0.8)
                                     : _T.textSecondary(dark),
                             fontSize: 11),
                       ),
@@ -1650,7 +1653,7 @@ class _ProfileViewState extends State<ProfileView>
                         boxShadow: biometricActive
                             ? [
                                 BoxShadow(
-                                    color: _T.cyan.withOpacity(0.35),
+                                    color: _T.cyan.withValues(alpha: 0.35),
                                     blurRadius: 8)
                               ]
                             : []),
@@ -1669,7 +1672,7 @@ class _ProfileViewState extends State<ProfileView>
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
+                                    color: Colors.black.withValues(alpha: 0.15),
                                     blurRadius: 4)
                               ])),
                     ),
@@ -1693,16 +1696,18 @@ class _ProfileViewState extends State<ProfileView>
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: dark ? _T.cyan.withOpacity(0.07) : _T.inputFill(dark),
+                  color: dark
+                      ? _T.cyan.withValues(alpha: 0.07)
+                      : _T.inputFill(dark),
                   border: Border.all(
                       color: dark
-                          ? _T.cyan.withOpacity(0.25)
+                          ? _T.cyan.withValues(alpha: 0.25)
                           : _T.inputBorder(dark))),
               child: Row(children: [
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                      color: _T.violet.withOpacity(0.1),
+                      color: _T.violet.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: Icon(
                       dark
@@ -1740,7 +1745,7 @@ class _ProfileViewState extends State<ProfileView>
                       boxShadow: dark
                           ? [
                               BoxShadow(
-                                  color: _T.violet.withOpacity(0.35),
+                                  color: _T.violet.withValues(alpha: 0.35),
                                   blurRadius: 8)
                             ]
                           : []),
@@ -1758,7 +1763,7 @@ class _ProfileViewState extends State<ProfileView>
                             color: Colors.white,
                             boxShadow: [
                               BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 4)
                             ])),
                   ),
@@ -1777,7 +1782,7 @@ class _ProfileViewState extends State<ProfileView>
               Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                      color: _T.green.withOpacity(0.1),
+                      color: _T.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.info_outline_rounded,
                       color: _T.green, size: 22)),
@@ -1800,9 +1805,10 @@ class _ProfileViewState extends State<ProfileView>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                    color: _T.green.withOpacity(0.1),
+                    color: _T.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _T.green.withOpacity(0.25))),
+                    border:
+                        Border.all(color: _T.green.withValues(alpha: 0.25))),
                 child: const Text('Latest',
                     style: TextStyle(
                         color: _T.green,
@@ -1822,8 +1828,9 @@ class _ProfileViewState extends State<ProfileView>
         height: 52,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: _T.red.withOpacity(dark ? 0.08 : 0.05),
-            border: Border.all(color: _T.red.withOpacity(0.35), width: 1.5)),
+            color: _T.red.withValues(alpha: dark ? 0.08 : 0.05),
+            border:
+                Border.all(color: _T.red.withValues(alpha: 0.35), width: 1.5)),
         child:
             const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.logout_rounded, color: _T.red, size: 18),
@@ -1847,7 +1854,7 @@ class _ProfileViewState extends State<ProfileView>
           border: Border.all(color: _T.cardBorder(dark)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(dark ? 0.25 : 0.06),
+                color: Colors.black.withValues(alpha: dark ? 0.25 : 0.06),
                 blurRadius: 16,
                 offset: const Offset(0, 6))
           ]),
@@ -1860,9 +1867,9 @@ class _ProfileViewState extends State<ProfileView>
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withOpacity(0.2))),
+            border: Border.all(color: color.withValues(alpha: 0.2))),
         child: Icon(icon, color: color, size: 17),
       ),
       const SizedBox(width: 10),
@@ -1932,7 +1939,7 @@ class _PhotoSourceSheet extends StatelessWidget {
           border: Border.all(color: _T.cardBorder(dark), width: 1.2),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(dark ? 0.5 : 0.1),
+                color: Colors.black.withValues(alpha: dark ? 0.5 : 0.1),
                 blurRadius: 40,
                 offset: const Offset(0, -8))
           ]),
@@ -1942,7 +1949,7 @@ class _PhotoSourceSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-                color: _T.textMuted(dark).withOpacity(0.4),
+                color: _T.textMuted(dark).withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 20),
         Container(
@@ -2029,13 +2036,14 @@ class _PhotoSourceSheet extends StatelessWidget {
         height: 88,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            color: color.withOpacity(dark ? 0.08 : 0.06),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.2)),
+            color: color.withValues(alpha: dark ? 0.08 : 0.06),
+            border:
+                Border.all(color: color.withValues(alpha: 0.3), width: 1.2)),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  shape: BoxShape.circle, color: color.withOpacity(0.15)),
+                  shape: BoxShape.circle, color: color.withValues(alpha: 0.15)),
               child: Icon(icon, color: color, size: 24)),
           const SizedBox(height: 6),
           Text(label,
@@ -2076,7 +2084,7 @@ class _DarkOrbPainter extends CustomPainter {
         180,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF7B61FF).withOpacity(0.2),
+            const Color(0xFF7B61FF).withValues(alpha: 0.2),
             Colors.transparent,
           ]).createShader(Rect.fromCircle(center: c1, radius: 180)));
     final a2 = t * 2 * math.pi + math.pi;
@@ -2087,7 +2095,7 @@ class _DarkOrbPainter extends CustomPainter {
         200,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF00D4FF).withOpacity(0.15),
+            const Color(0xFF00D4FF).withValues(alpha: 0.15),
             Colors.transparent,
           ]).createShader(Rect.fromCircle(center: c2, radius: 200)));
   }
@@ -2114,7 +2122,7 @@ class _LightBgPainter extends CustomPainter {
         220,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF00D4FF).withOpacity(0.06),
+            const Color(0xFF00D4FF).withValues(alpha: 0.06),
             Colors.transparent,
           ]).createShader(Rect.fromCircle(
               center: Offset(size.width * 0.9, size.height * 0.05),
@@ -2124,7 +2132,7 @@ class _LightBgPainter extends CustomPainter {
         200,
         Paint()
           ..shader = RadialGradient(colors: [
-            const Color(0xFF7B61FF).withOpacity(0.05),
+            const Color(0xFF7B61FF).withValues(alpha: 0.05),
             Colors.transparent,
           ]).createShader(Rect.fromCircle(
               center: Offset(size.width * 0.05, size.height * 0.85),

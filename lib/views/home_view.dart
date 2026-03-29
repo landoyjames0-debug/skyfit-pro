@@ -22,18 +22,6 @@ class _T {
             MediaQuery.of(ctx).platformBrightness == Brightness.dark);
   }
 
-  /// Returns the primary text color for the given [dark] mode.
-  ///
-  /// If [dark] is true, returns white. Otherwise, returns a dark blue color.
-  ///
-  /// This color is used throughout the app for primary text elements.
-  ///
-  /// See also:
-  ///
-  /// * [textSecondary], which returns the secondary text color based on the given [dark] mode.
-  /// * [textMuted], which returns the muted text color based on the given [dark] mode.
-  /// * [scaffoldBg], which returns the background color for the given [dark] mode.
-  /// * [cardBg], which returns the background color for cards in the given [dark] mode.
   static Color textPrimary(bool dark) =>
       dark ? Colors.white : const Color(0xFF0F1923);
   static Color textSecondary(bool dark) =>
@@ -517,7 +505,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       child: Scaffold(
         backgroundColor: _T.scaffoldBg(dark),
         body: Stack(children: [
-          // Animated background matching ProfileView
           if (dark)
             _AnimatedBackground(controller: _bgAnimController, size: size)
           else
@@ -592,7 +579,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
         border: Border(bottom: BorderSide(color: _T.divider(dark), width: 1)),
       ),
       child: Row(children: [
-        // Brand icon with gradient
         Container(
             width: 36,
             height: 36,
@@ -603,7 +589,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             child: const Icon(Icons.fitness_center_rounded,
                 color: Colors.white, size: 16)),
         const SizedBox(width: 10),
-        // Brand name + greeting
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -626,7 +611,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                     fontWeight: FontWeight.w500)),
           ]),
         ),
-        // Session timer
         _SessionTimerChip(
           key: _timerKey,
           initialSeconds: _sessionSeconds,
@@ -634,7 +618,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
           onInteraction: _onUserInteraction,
         ),
         const SizedBox(width: 8),
-        // Theme toggle
         GestureDetector(
             onTap: () {
               authVM.toggleTheme();
@@ -652,7 +635,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                     color: _T.textSecondary(dark),
                     size: 15))),
         const SizedBox(width: 8),
-        // Avatar
         GestureDetector(
             key: _avatarKey,
             onTap: _toggleMenu,
@@ -777,7 +759,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             children: [
-              // ── Weather Card ──
               if (weatherVM.weather != null) ...[
                 Container(
                     decoration: BoxDecoration(
@@ -790,14 +771,10 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                         child: WeatherCard(weather: weatherVM.weather!))),
                 const SizedBox(height: 12),
               ],
-
-              // ── Stats Bar ──
               if (userVM.user != null) ...[
                 _buildStatsBar(userVM, dark),
                 const SizedBox(height: 20),
               ],
-
-              // ── Section Header ──
               Row(children: [
                 Text("Today's Activities",
                     style: TextStyle(
@@ -821,8 +798,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                             fontWeight: FontWeight.w600))),
               ]),
               const SizedBox(height: 10),
-
-              // ── Activity Cards ──
               ...weatherVM.activities.map((a) => Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Container(
@@ -860,7 +835,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
         boxShadow: _T.cardShadow(dark),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Three stat tiles ──
         IntrinsicHeight(
           child: Row(children: [
             _statTile(
@@ -886,8 +860,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                 isCategory: true),
           ]),
         ),
-
-        // ── Fitness goal ──
         if (user.fitnessGoal != null) ...[
           const SizedBox(height: 16),
           Container(
@@ -1125,7 +1097,7 @@ class _MiniMenuOverlayState extends State<_MiniMenuOverlay>
   }
 }
 
-// ─── Animated dark background (matches ProfileView) ───────────────────────────
+// ─── Animated dark background ─────────────────────────────────────────────────
 class _AnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
@@ -1175,7 +1147,7 @@ class _DarkOrbPainter extends CustomPainter {
   bool shouldRepaint(_DarkOrbPainter old) => old.t != t;
 }
 
-// ─── Light mode background (matches ProfileView) ──────────────────────────────
+// ─── Light mode background ────────────────────────────────────────────────────
 class _LightBackground extends StatelessWidget {
   final Size size;
   const _LightBackground({required this.size});
