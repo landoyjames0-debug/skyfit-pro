@@ -11,9 +11,6 @@ import '../viewmodels/user_viewmodel.dart';
 import '../viewmodels/weather_viewmodel.dart';
 import 'auth/login_view.dart';
 
-// ─── Re-export session timer chip so home_view can share the type ─────────────
-// (SessionTimerChipState is imported from home_view.dart)
-
 // ─── Theme helpers ────────────────────────────────────────────────────────────
 class _T {
   _T._();
@@ -58,6 +55,7 @@ class _SessionTimerChip extends StatefulWidget {
   final VoidCallback onTimeout;
 
   const _SessionTimerChip({
+    super.key,
     required this.initialSeconds,
     required this.onTimeout,
   });
@@ -75,6 +73,12 @@ class _SessionTimerChipState extends State<_SessionTimerChip> {
     super.initState();
     _remaining = widget.initialSeconds;
     _startTimer();
+  }
+
+  // ── Resets timer on user interaction ──────────────────────────────────────
+  void resetTimer() {
+    if (!mounted) return;
+    setState(() => _remaining = widget.initialSeconds);
   }
 
   void _startTimer() {
@@ -299,6 +303,9 @@ class _ProfileViewState extends State<ProfileView>
   int _biometricFailCount = 0;
   static const int _maxBiometricAttempts = 3;
   static const int _sessionSeconds = 300;
+
+  // ── Session timer key — used to reset the timer on user interaction ────────
+  final _sessionTimerKey = GlobalKey<_SessionTimerChipState>();
 
   late final AnimationController _bgAnimController;
   late final AnimationController _fadeController;
@@ -777,23 +784,28 @@ class _ProfileViewState extends State<ProfileView>
 
     return Scaffold(
       backgroundColor: _T.scaffoldBg(dark),
-      body: Stack(children: [
-        if (dark)
-          _AnimatedBackground(controller: _bgAnimController, size: size)
-        else
-          _LightBackground(size: size),
-        SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: Form(
-              key: _formKey,
-              child: isWide
-                  ? _buildWebLayout(context, user, authVM, dark, size)
-                  : _buildMobileLayout(context, user, authVM, dark),
+      body: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => _sessionTimerKey.currentState?.resetTimer(),
+        onPointerMove: (_) => _sessionTimerKey.currentState?.resetTimer(),
+        child: Stack(children: [
+          if (dark)
+            _AnimatedBackground(controller: _bgAnimController, size: size)
+          else
+            _LightBackground(size: size),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: Form(
+                key: _formKey,
+                child: isWide
+                    ? _buildWebLayout(context, user, authVM, dark, size)
+                    : _buildMobileLayout(context, user, authVM, dark),
+              ),
             ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 
@@ -943,6 +955,7 @@ class _ProfileViewState extends State<ProfileView>
         ),
         // ── Session Timer ──
         _SessionTimerChip(
+          key: _sessionTimerKey,
           initialSeconds: _sessionSeconds,
           onTimeout: _onSessionTimeout,
         ),
