@@ -25,3 +25,4 @@ firebase_options.dart
 
 # Dependencies
 pubspec.lockandroid/app/google-services.json
+google-services.json
