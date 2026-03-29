@@ -1,37 +1,27 @@
-# Flutter
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-build/
-
-# Firebase - NEVER commit these
-google-services.json
-GoogleService-Info.plist
-firebase_options.dart
-
-# Environment files - NEVER commit
-.env
-.env.*
-*.env
-
 # IDE
-.idea/
 .vscode/
 *.iml
+.idea/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# run.sh
-flutter run `
-  --dart-define=FIREBASE_API_KEY=AIzaSyBlc9GB09PgFr-_KvBoP40t-C5WD6E5Ajw `
-  --dart-define=FIREBASE_APP_ID=1:1055112886693:android:97f5f95eb874ad8344504c `
-  --dart-define=FIREBASE_MESSAGING_SENDER_ID=1055112886693 `
-  --dart-define=FIREBASE_PROJECT_ID=skyfit-pro `
-  --dart-define=FIREBASE_AUTH_DOMAIN=skyfit-pro.firebaseapp.com `
-  --dart-define=FIREBASE_STORAGE_BUCKET=skyfit-pro.firebasestorage.app `
-  --dart-define=GOOGLE_WEB_CLIENT_ID=1055112886693-8jqao3rnopb73vv0ljjat83rdk279b07.apps.googleusercontent.com.env
+# Flutter
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+
+# Environment & secrets
+.env
+*.env
+.env.*
+run.sh
+
+# Firebase secrets — excluded from version control
+firebase_options.dart
+
+# Dependencies
+pubspec.lock
