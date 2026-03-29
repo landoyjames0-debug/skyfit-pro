@@ -1,17 +1,17 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import '../../models/activity_model.dart';
+import '../../services/activity_engine.dart';
 
 class ActivityCard extends StatelessWidget {
-  final ActivityModel activity;
+  final ActivitySuggestion activity;
   const ActivityCard({super.key, required this.activity});
 
   Color _intensityColor(String intensity) {
     switch (intensity) {
       case 'High':
         return const Color(0xFFE53935);
-      case 'Medium':
+      case 'Moderate':
         return const Color(0xFFFFB74D);
       default:
         return const Color(0xFF66BB6A);
@@ -19,9 +19,10 @@ class ActivityCard extends StatelessWidget {
   }
 
   void _openVideoDialog(BuildContext context) {
-    if (activity.videoAsset.isEmpty) {
+    final videoAsset = activity.videoAsset;
+    if (videoAsset == null || videoAsset.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No video available for ${activity.title}')),
+        SnackBar(content: Text('No video available for ${activity.name}')),
       );
       return;
     }
@@ -30,8 +31,9 @@ class ActivityCard extends StatelessWidget {
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.85),
       builder: (_) => _VideoDialog(
-        title: activity.title,
-        videoAsset: activity.videoAsset,
+        title: activity.name,
+        videoAsset: videoAsset,
+        videoUrl: activity.videoUrl,
         emoji: activity.emoji,
       ),
     );
@@ -45,8 +47,10 @@ class ActivityCard extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Text(activity.emoji, style: const TextStyle(fontSize: 36)),
-        title: Text(activity.title,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          activity.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -55,10 +59,13 @@ class ActivityCard extends StatelessWidget {
             Row(
               children: [
                 Chip(
-                  label: Text(activity.intensity,
-                      style: TextStyle(
-                          color: _intensityColor(activity.intensity),
-                          fontSize: 12)),
+                  label: Text(
+                    activity.intensity,
+                    style: TextStyle(
+                      color: _intensityColor(activity.intensity),
+                      fontSize: 12,
+                    ),
+                  ),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: EdgeInsets.zero,
                 ),
@@ -82,12 +89,14 @@ class ActivityCard extends StatelessWidget {
 class _VideoDialog extends StatefulWidget {
   final String title;
   final String videoAsset;
+  final String? videoUrl;
   final String emoji;
 
   const _VideoDialog({
     required this.title,
     required this.videoAsset,
     required this.emoji,
+    this.videoUrl,
   });
 
   @override
@@ -109,29 +118,23 @@ class _VideoDialogState extends State<_VideoDialog> {
   Future<void> _initVideo() async {
     try {
       if (kIsWeb) {
-        // On web, VideoPlayerController.asset() has CORS issues because
-        // the browser treats asset requests as cross-origin.
-        // VideoPlayerController.networkUrl() with a relative URI works correctly
-        // since Flutter web serves assets over HTTP from the same origin.
-        //
-        // Example: 'assets/videos/hiit.mp4' → Uri.parse('assets/videos/hiit.mp4')
-        // This resolves relative to the app's base URL, avoiding CORS entirely.
+        // On web, use the Google Drive preview URL if available,
+        // otherwise fall back to the asset path.
+        final url = widget.videoUrl ?? widget.videoAsset;
         _controller = VideoPlayerController.networkUrl(
-          Uri.parse(widget.videoAsset),
+          Uri.parse(url),
           httpHeaders: const {
-            // No special headers needed for same-origin assets,
-            // but added for completeness if you ever swap to a CDN.
             'Accept': 'video/mp4,video/*',
           },
         );
       } else {
-        // On mobile: asset loading works natively with no CORS concerns.
+        // On mobile: asset loading works natively.
         _controller = VideoPlayerController.asset(widget.videoAsset);
       }
 
       await _controller.initialize();
       _controller.addListener(_onVideoUpdate);
-      _controller.setLooping(true); // loop workout demo videos
+      _controller.setLooping(true);
 
       if (mounted) {
         setState(() => _isInitialized = true);
@@ -288,7 +291,6 @@ class _VideoDialogState extends State<_VideoDialog> {
             style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
           ),
-          // Show web-specific hint
           if (kIsWeb) ...[
             const SizedBox(height: 6),
             Text(

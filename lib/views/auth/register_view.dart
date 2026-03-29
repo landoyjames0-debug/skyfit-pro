@@ -37,7 +37,6 @@ class _RegisterViewState extends State<RegisterView>
 
   // ── Profile photo state ──────────────────────────────────────────────────
   Uint8List? _profileImageBytes;
-  String? _profileImagePath; // non-web only
   bool _isPickingPhoto = false;
 
   late AnimationController _bgAnimController;
@@ -300,7 +299,6 @@ class _RegisterViewState extends State<RegisterView>
       if (picked == null || !mounted) return;
 
       Uint8List? finalBytes;
-      String? finalPath;
 
       if (kIsWeb) {
         finalBytes = await picked.readAsBytes();
@@ -326,14 +324,12 @@ class _RegisterViewState extends State<RegisterView>
           ],
         );
         if (cropped == null || !mounted) return;
-        finalPath = cropped.path;
         finalBytes = await cropped.readAsBytes();
       }
 
       if (!mounted) return;
       setState(() {
         _profileImageBytes = finalBytes;
-        _profileImagePath = finalPath;
       });
     } catch (e) {
       if (!mounted) return;
@@ -1087,7 +1083,7 @@ class _RegisterViewState extends State<RegisterView>
   Widget _buildDropdown(String label, IconData icon, String? value,
       List<String> items, void Function(String?) onChanged) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       dropdownColor: const Color(0xFF0D1117),
       style: const TextStyle(color: Colors.white, fontSize: 14),
       icon: Icon(Icons.keyboard_arrow_down_rounded,

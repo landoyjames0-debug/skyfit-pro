@@ -11,16 +11,9 @@ import 'widgets/activity_card.dart';
 import 'widgets/weather_card.dart';
 import 'auth/login_view.dart';
 
-// ─── Design System (matches ProfileView's _T) ─────────────────────────────────
+// ─── Design System ─────────────────────────────────────────────────────────────
 class _T {
   _T._();
-
-  static bool isDark(BuildContext ctx) {
-    final authVM = ctx.read<AuthViewModel>();
-    return authVM.themeMode == ThemeMode.dark ||
-        (authVM.themeMode == ThemeMode.system &&
-            MediaQuery.of(ctx).platformBrightness == Brightness.dark);
-  }
 
   static Color textPrimary(bool dark) =>
       dark ? Colors.white : const Color(0xFF0F1923);
@@ -509,7 +502,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             _AnimatedBackground(controller: _bgAnimController, size: size)
           else
             _LightBackground(size: size),
-
           SafeArea(
             child: FadeTransition(
               opacity: _fadeAnim,
@@ -519,37 +511,40 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
               ]),
             ),
           ),
-
           // Scroll-to-top FAB
           Positioned(
             bottom: 24,
             right: 20,
             child: AnimatedOpacity(
-                opacity: _showScrollTop ? 1.0 : 0.0,
+              opacity: _showScrollTop ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: AnimatedSlide(
+                offset: _showScrollTop ? Offset.zero : const Offset(0, 0.5),
                 duration: const Duration(milliseconds: 200),
-                child: AnimatedSlide(
-                    offset: _showScrollTop ? Offset.zero : const Offset(0, 0.5),
-                    duration: const Duration(milliseconds: 200),
-                    child: IgnorePointer(
-                      ignoring: !_showScrollTop,
-                      child: GestureDetector(
-                          onTap: () {
-                            _onUserInteraction();
-                            _scrollController.animateTo(0,
-                                duration: const Duration(milliseconds: 400),
-                                curve: Curves.easeOut);
-                          },
-                          child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  gradient: const LinearGradient(
-                                      colors: [_T.cyan, _T.violet]),
-                                  boxShadow: _T.glowShadow(_T.cyan)),
-                              child: const Icon(Icons.keyboard_arrow_up_rounded,
-                                  color: Colors.white, size: 20))),
-                    ))),
+                child: IgnorePointer(
+                  ignoring: !_showScrollTop,
+                  child: GestureDetector(
+                    onTap: () {
+                      _onUserInteraction();
+                      _scrollController.animateTo(0,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOut);
+                    },
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: const LinearGradient(
+                              colors: [_T.cyan, _T.violet]),
+                          boxShadow: _T.glowShadow(_T.cyan)),
+                      child: const Icon(Icons.keyboard_arrow_up_rounded,
+                          color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ]),
       ),
@@ -755,64 +750,80 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 860),
-          child: ListView(
+          child: Scrollbar(
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            children: [
-              if (weatherVM.weather != null) ...[
-                Container(
+            thumbVisibility: true,
+            thickness: 4,
+            radius: const Radius.circular(4),
+            child: ListView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 16, 20, 100),
+              children: [
+                if (weatherVM.weather != null) ...[
+                  Container(
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         color: _T.cardBg(dark),
                         border: Border.all(color: _T.cardBorder(dark)),
                         boxShadow: _T.cardShadow(dark)),
                     child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: WeatherCard(weather: weatherVM.weather!))),
-                const SizedBox(height: 12),
-              ],
-              if (userVM.user != null) ...[
-                _buildStatsBar(userVM, dark),
-                const SizedBox(height: 20),
-              ],
-              Row(children: [
-                Text("Today's Activities",
+                      borderRadius: BorderRadius.circular(20),
+                      child: WeatherCard(weather: weatherVM.weather!),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (userVM.user != null) ...[
+                  _buildStatsBar(userVM, dark),
+                  const SizedBox(height: 20),
+                ],
+                Row(children: [
+                  Text(
+                    "Today's Activities",
                     style: TextStyle(
-                        color: _T.textPrimary(dark),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2)),
-                const Spacer(),
-                Container(
+                      color: _T.textPrimary(dark),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                        color: _T.cyan.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
-                        border:
-                            Border.all(color: _T.cyan.withValues(alpha: 0.2))),
-                    child: Text('${weatherVM.activities.length} activities',
-                        style: const TextStyle(
-                            color: _T.cyan,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600))),
-              ]),
-              const SizedBox(height: 10),
-              ...weatherVM.activities.map((a) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Container(
-                      decoration: BoxDecoration(
+                      color: _T.cyan.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: _T.cyan.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      '${weatherVM.activities.length} activities',
+                      style: const TextStyle(
+                        color: _T.cyan,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                ...weatherVM.activities.map((a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           color: _T.cardBg(dark),
                           border: Border.all(color: _T.cardBorder(dark)),
-                          boxShadow: _T.cardShadow(dark)),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: ActivityCard(activity: a),
+                          boxShadow: _T.cardShadow(dark),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: ActivityCard(activity: a),
+                        ),
                       ),
-                    ),
-                  )),
-            ],
+                    )),
+              ],
+            ),
           ),
         ),
       ),
@@ -1097,7 +1108,7 @@ class _MiniMenuOverlayState extends State<_MiniMenuOverlay>
   }
 }
 
-// ─── Animated dark background ─────────────────────────────────────────────────
+// ─── Animated dark background ──────────────────────────────────────────────────
 class _AnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
@@ -1147,7 +1158,7 @@ class _DarkOrbPainter extends CustomPainter {
   bool shouldRepaint(_DarkOrbPainter old) => old.t != t;
 }
 
-// ─── Light mode background ────────────────────────────────────────────────────
+// ─── Light mode background ─────────────────────────────────────────────────────
 class _LightBackground extends StatelessWidget {
   final Size size;
   const _LightBackground({required this.size});

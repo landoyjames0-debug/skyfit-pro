@@ -22,6 +22,7 @@ dependencies:
   image_cropper: ^11.0.0
   video_player: ^2.9.1
   crypto: ^3.0.3
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

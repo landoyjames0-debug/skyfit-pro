@@ -1,52 +1,28 @@
-# SkyFit Pro OTP Fix Task
+# Skyfit Pro Debugging TODO
 
-## Steps to Complete:
+## Approved Plan Steps (In Progress)
 
-### 1. [x] Update AuthViewModel.registerWithEmail ✅
+### 1. ✅ [DONE] Create TODO.md to track progress
 
-- Modified to auto signIn after createUser
-- Ensures returns true on success, notifies listeners
+### 2. 🔄 Edit home_view.dart
 
-### 2. [x] Simplify RegisterView onVerified callback ✅
+- Complete ActivityCard constructor (syntax fix)
+- Remove unused \_T.isDark method
 
-- Removed popUntil, registered modal, photo upload from callback
-- Now just calls authVM.registerWithEmail → userVM.createProfile
-- OTP view handles navigation to HomeView
+### 3. 🔄 Edit register_view.dart
 
-### 3. [ ] Test registration flow
+- Remove unused \_profileImagePath field/assignment
+- Fix 2x DropdownButtonFormField: value: → initialValue:
 
-- Register new user → enter OTP → verify → auto sign-in → HomeView
+### 4. 🔄 Edit profile_view.dart
 
-### 4. [ ] Verify Firebase
+- Fix DropdownButtonFormField: value: → initialValue:
 
-- Check user created and signed in
-- Profile saved to Firestore
+### 5. 🔄 Verification
 
-**Progress: 2/4**
+- Run `flutter analyze`
+- Test screens (hot reload)
+- Update TODO with results
+- attempt_completion
 
-### 3. [ ] Test registration flow
-
-- Register new user → enter OTP → verify → auto sign-in → HomeView
-
-### 4. [ ] Verify Firebase
-
-- Check user created and signed in
-- Profile saved to Firestore
-
-**Progress: 1/4**
-
-### 2. [ ] Simplify RegisterView onVerified callback
-
-- Remove popUntil, registered modal, photo upload (move elsewhere)
-- Just call authVM.registerWithEmail → userVM.createProfile → return
-
-### 3. [ ] Test registration flow
-
-- Register new user → enter OTP → verify → auto sign-in → HomeView
-
-### 4. [ ] Verify Firebase
-
-- Check user created and signed in
-- Profile saved to Firestore
-
-**Progress: 0/4**
+**Current Status:** Starting file edits...

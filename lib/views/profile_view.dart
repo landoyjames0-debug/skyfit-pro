@@ -1524,7 +1524,7 @@ class _ProfileViewState extends State<ProfileView>
   }) {
     return DropdownButtonFormField<String>(
       // FIX: replaced deprecated `value:` with `initialValue:`
-      value: value,
+      initialValue: value,
       style: TextStyle(color: _T.textPrimary(dark), fontSize: 14),
       dropdownColor: _T.cardBg(dark),
       icon: Icon(Icons.keyboard_arrow_down_rounded,

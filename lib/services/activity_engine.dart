@@ -2,7 +2,33 @@ import 'dart:math';
 import '../models/user_model.dart';
 import '../models/weather_model.dart';
 
-/// A suggested workout activity returned by [ActivityEngine].
+// ── Google Drive video URLs ──────────────────────────────────────────────────
+const _driveBase = 'https://drive.google.com/file/d';
+const _videoUrls = {
+  'assets/videos/bodyweight.mp4':
+      '$_driveBase/1Q7n7juY-S86ybkRq5cqbzdN9hX2VF70l/preview',
+  'assets/videos/brisk_walk.mp4':
+      '$_driveBase/1adOBSceszHBLnS1UmctwMQmg7po_JYpi/preview',
+  'assets/videos/cycling.mp4':
+      '$_driveBase/1ckA_Th0UTq5K6uM8StocRWWQQvsmcTe4/preview',
+  'assets/videos/hiit.mp4':
+      '$_driveBase/1hnRlI74RlDjsyJso9_0DfxXdUBTRjkcx/preview',
+  'assets/videos/morning_walk.mp4':
+      '$_driveBase/1mQ_KgcKqNGgsa7LrWvmIAeL_DE37-Bos/preview',
+  'assets/videos/outdoor_running.mp4':
+      '$_driveBase/1faR9jMqFucwKxn4XhWgtGYBF5t8-uPJr/preview',
+  'assets/videos/resistance_bands.mp4':
+      '$_driveBase/1yCGhj1g8t_3yV8ReNMpKbrGxzD4Ox7-r/preview',
+  'assets/videos/stretching.mp4':
+      '$_driveBase/1NMNpF-dxSy8lHC-3rl8q7UGiiCHIXDI9/preview',
+  'assets/videos/swimming.mp4':
+      '$_driveBase/1jeOasIGcddBp6-URhDRaRpQCrzmRPWRy/preview',
+  'assets/videos/tai_chi.mp4':
+      '$_driveBase/1QRExpcxWbJ2JZCvlsbixzpNLcGDIo87j/preview',
+  'assets/videos/yoga.mp4':
+      '$_driveBase/18jVz6YrZvTABX0mw2qi7yz5eiSeyENyV/preview',
+};
+
 class ActivitySuggestion {
   final String name;
   final String description;
@@ -10,6 +36,7 @@ class ActivitySuggestion {
   final int durationMinutes;
   final String emoji;
   final String? videoAsset;
+  final String? videoUrl;
 
   const ActivitySuggestion({
     required this.name,
@@ -18,6 +45,7 @@ class ActivitySuggestion {
     required this.durationMinutes,
     required this.emoji,
     this.videoAsset,
+    this.videoUrl,
   });
 }
 
@@ -58,7 +86,20 @@ class ActivityEngine {
 
     final rng = Random();
     final shuffled = List<ActivitySuggestion>.from(pool)..shuffle(rng);
-    return shuffled.take(_pickCount).toList();
+    final picked = shuffled.take(_pickCount).toList();
+
+    // ✅ Map videoUrl from _videoUrls using videoAsset key
+    return picked
+        .map((a) => ActivitySuggestion(
+              name: a.name,
+              description: a.description,
+              intensity: a.intensity,
+              durationMinutes: a.durationMinutes,
+              emoji: a.emoji,
+              videoAsset: a.videoAsset,
+              videoUrl: a.videoAsset != null ? _videoUrls[a.videoAsset] : null,
+            ))
+        .toList();
   }
 
   // ── Age tier classifier ──────────────────────────────────────────────────
