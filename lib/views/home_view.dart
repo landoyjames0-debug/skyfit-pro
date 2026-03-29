@@ -750,80 +750,74 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 860),
-          child: Scrollbar(
+          child: ListView(
             controller: _scrollController,
-            thumbVisibility: true,
-            thickness: 4,
-            radius: const Radius.circular(4),
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 16, 20, 100),
-              children: [
-                if (weatherVM.weather != null) ...[
-                  Container(
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
+            padding: const EdgeInsets.fromLTRB(16, 16, 20, 100),
+            children: [
+              if (weatherVM.weather != null) ...[
+                Container(
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: _T.cardBg(dark),
+                      border: Border.all(color: _T.cardBorder(dark)),
+                      boxShadow: _T.cardShadow(dark)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: WeatherCard(weather: weatherVM.weather!),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (userVM.user != null) ...[
+                _buildStatsBar(userVM, dark),
+                const SizedBox(height: 20),
+              ],
+              Row(children: [
+                Text(
+                  "Today's Activities",
+                  style: TextStyle(
+                    color: _T.textPrimary(dark),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _T.cyan.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: _T.cyan.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    '${weatherVM.activities.length} activities',
+                    style: const TextStyle(
+                      color: _T.cyan,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              ...weatherVM.activities.map((a) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
                         color: _T.cardBg(dark),
                         border: Border.all(color: _T.cardBorder(dark)),
-                        boxShadow: _T.cardShadow(dark)),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: WeatherCard(weather: weatherVM.weather!),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (userVM.user != null) ...[
-                  _buildStatsBar(userVM, dark),
-                  const SizedBox(height: 20),
-                ],
-                Row(children: [
-                  Text(
-                    "Today's Activities",
-                    style: TextStyle(
-                      color: _T.textPrimary(dark),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _T.cyan.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: _T.cyan.withValues(alpha: 0.2)),
-                    ),
-                    child: Text(
-                      '${weatherVM.activities.length} activities',
-                      style: const TextStyle(
-                        color: _T.cyan,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        boxShadow: _T.cardShadow(dark),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: ActivityCard(activity: a),
                       ),
                     ),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                ...weatherVM.activities.map((a) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: _T.cardBg(dark),
-                          border: Border.all(color: _T.cardBorder(dark)),
-                          boxShadow: _T.cardShadow(dark),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: ActivityCard(activity: a),
-                        ),
-                      ),
-                    )),
-              ],
-            ),
+                  )),
+            ],
           ),
         ),
       ),
