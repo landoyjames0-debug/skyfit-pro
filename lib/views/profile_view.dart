@@ -453,14 +453,18 @@ class _ProfileViewState extends State<ProfileView>
   }
 
   // ── Biometric state ────────────────────────────────────────────────────────
-  // Loads both hardware availability AND user preference for both web and mobile.
-  // On web: checks WebAuthn browser support.
-  // On mobile: checks local_auth hardware enrollment.
+  // Loads both hardware availability AND user preference.
+  // Always reads fresh from the ViewModel (which reads Firestore/prefs)
+  // so the toggle accurately reflects the saved state after registration.
   Future<void> _loadBiometricState() async {
+    if (!mounted) return;
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
 
     final available = await authVM.isBiometricAvailable();
+
+    // Always re-fetch the preference fresh from Firestore/prefs
+    // so it reflects what was just saved (e.g. after registering a passkey)
     final enabled = await userVM.isBiometricEnabled();
 
     if (!mounted) return;
@@ -690,7 +694,6 @@ class _ProfileViewState extends State<ProfileView>
   Future<void> _confirmToggleBiometric(bool value) async {
     if (_biometricLoading) return;
 
-    // If biometrics are not supported on this device/browser, bail with feedback
     if (!_biometricAvailable) {
       _showSnack('Biometrics not available on this device.', isError: true);
       return;
@@ -721,8 +724,7 @@ class _ProfileViewState extends State<ProfileView>
       if (value) {
         // ── Enabling biometrics ──────────────────────────────────────────────
         if (kIsWeb) {
-          // Web path: register a new passkey via WebAuthn
-          // The user's UID is used as the passkey identity
+          // Web: register a new passkey via WebAuthn
           final uid = context.read<AuthViewModel>().currentUser?.uid;
           if (uid == null) {
             _showSnack('Could not identify user. Please sign in again.',
@@ -733,21 +735,27 @@ class _ProfileViewState extends State<ProfileView>
               await context.read<AuthViewModel>().registerWebBiometric(uid);
           if (!mounted) return;
           if (credId == null) {
-            // User cancelled the browser prompt or it failed
             _showSnack(
                 'Passkey registration cancelled or failed. Please try again.',
                 isError: true);
             return;
           }
-          // Passkey registered — persist the enabled state
+
+          // FIX: persist enabled=true to Firestore/prefs FIRST,
+          // then update local state so the toggle visually reflects it.
           await context.read<UserViewModel>().toggleBiometric(true);
           if (!mounted) return;
-          setState(() => _biometricEnabled = true);
+
+          // Re-read from the source of truth to confirm it was saved
+          final confirmed =
+              await context.read<UserViewModel>().isBiometricEnabled();
+          if (!mounted) return;
+
+          setState(() => _biometricEnabled = confirmed);
           _showSnack('Passkey registered! Use it to sign in next time.',
               isError: false);
         } else {
-          // Mobile path: verify biometric before enabling
-          // Uses the same 3-attempt lockout as the login screen
+          // Mobile: verify biometric before enabling
           _biometricFailCount = 0;
           bool authenticated = false;
 
@@ -774,21 +782,34 @@ class _ProfileViewState extends State<ProfileView>
 
           if (!authenticated) return;
 
-          // Biometric verified — save enabled state
+          // FIX: persist enabled=true FIRST, then re-read to confirm
           await context.read<UserViewModel>().toggleBiometric(true);
           if (!mounted) return;
-          setState(() => _biometricEnabled = true);
+
+          final confirmed =
+              await context.read<UserViewModel>().isBiometricEnabled();
+          if (!mounted) return;
+
+          setState(() => _biometricEnabled = confirmed);
           _showSnack('Biometric login enabled!', isError: false);
         }
       } else {
         // ── Disabling biometrics ─────────────────────────────────────────────
-        // No biometric verification needed to disable — just update the preference
         await context.read<UserViewModel>().toggleBiometric(false);
         if (!mounted) return;
-        setState(() => _biometricEnabled = false);
+
+        // FIX: re-read from source of truth after disabling too
+        final confirmed =
+            await context.read<UserViewModel>().isBiometricEnabled();
+        if (!mounted) return;
+
+        setState(() => _biometricEnabled = confirmed);
         _showSnack('Biometric login disabled.', isError: false);
       }
     } catch (_) {
+      // FIX: on any error, reload the real state from source of truth
+      // so the toggle doesn't get stuck in the wrong visual position
+      await _loadBiometricState();
       _showSnack('Failed to update biometric setting.', isError: true);
     } finally {
       if (mounted) setState(() => _biometricLoading = false);
@@ -1614,13 +1635,10 @@ class _ProfileViewState extends State<ProfileView>
   }
 
   // ── Security card ──────────────────────────────────────────────────────────
-  // Now works for both web (passkeys) and mobile (fingerprint/face).
-  // The toggle is only disabled if the device/browser has no biometric support.
   Widget _buildSecurityCard(bool dark) {
     final biometricActive = _biometricAvailable && _biometricEnabled;
     final biometricDisabled = !_biometricAvailable;
 
-    // Label text adapts to platform and state
     String biometricSubtitle;
     if (!_biometricAvailable) {
       biometricSubtitle = kIsWeb

@@ -26,14 +26,14 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   bool _isBiometricLoading = false;
 
   // ── Biometric state ────────────────────────────────────────────────────────
-  // The button is only shown when BOTH conditions are true:
-  //   1. The device/browser supports biometrics
-  //   2. The user has explicitly enabled it in Profile (stored in Firestore/prefs)
-  // It is hidden permanently for the session after 3 failed attempts.
   bool _showBiometric = false;
-  bool _biometricLockedOut = false; // true after 3 failures → forces password
+  bool _biometricLockedOut = false;
   int _biometricFailCount = 0;
   static const int _maxBiometricAttempts = 3;
+
+  // FIX: track whether a biometric check is already running
+  // to prevent duplicate calls from didChangeDependencies
+  bool _biometricCheckInProgress = false;
 
   Timer? _errorDismissTimer;
 
@@ -74,22 +74,27 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
     _fadeController.forward();
     _slideController.forward();
+  }
 
-    // Check biometric availability after first frame so context is ready
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  // ── FIX: use didChangeDependencies instead of addPostFrameCallback ─────────
+  // This fires on first build AND every time this screen is navigated back to
+  // (e.g. returning from Profile after enabling biometrics), ensuring the
+  // biometric button always reflects the latest saved preference.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only run if not locked out and not already checking
+    if (!_biometricLockedOut && !_biometricCheckInProgress) {
       _checkBiometricAvailability();
-    });
+    }
   }
 
   // ── Biometric visibility logic ─────────────────────────────────────────────
-  // Flow:
-  //   1. Check device/browser supports biometrics
-  //   2. Resolve the UID — use active Firebase session first,
-  //      then fall back to 'last_user_uid' saved at sign-out
-  //   3. Load that user's Firestore doc to read their biometric preference
-  //   4. Show button only if all checks pass
   Future<void> _checkBiometricAvailability() async {
     if (!mounted) return;
+
+    // Guard against concurrent calls
+    _biometricCheckInProgress = true;
 
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
@@ -97,7 +102,10 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     // 1. Hardware / browser capability check
     final deviceSupports = await authVM.isBiometricAvailable();
     if (!deviceSupports) {
-      if (mounted) setState(() => _showBiometric = false);
+      if (mounted) {
+        setState(() => _showBiometric = false);
+        _biometricCheckInProgress = false;
+      }
       return;
     }
 
@@ -106,20 +114,23 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     final uid = authVM.currentUser?.uid ?? prefs.getString('last_user_uid');
 
     if (uid == null) {
-      // Truly brand-new install, never logged in before
-      if (mounted) setState(() => _showBiometric = false);
+      if (mounted) {
+        setState(() => _showBiometric = false);
+        _biometricCheckInProgress = false;
+      }
       return;
     }
 
     // 3. Load user document so isBiometricEnabled() can read Firestore
     await userVM.loadUser(uid);
 
-    // 4. Read the user's saved preference
+    // 4. Read the user's saved preference fresh from source of truth
     final userEnabled = await userVM.isBiometricEnabled();
 
     if (mounted) {
       setState(() {
         _showBiometric = deviceSupports && userEnabled && !_biometricLockedOut;
+        _biometricCheckInProgress = false;
       });
     }
   }
@@ -319,11 +330,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 
   // ── Biometric authentication ───────────────────────────────────────────────
-  // Flow:
-  //   1. Try biometric auth
-  //   2. On success → navigate to Home (no full re-login needed)
-  //   3. On failure → increment counter, show remaining attempts
-  //   4. After 3 failures → lock out, hide button, focus password field
   Future<void> _onBiometricPressed() async {
     if (_biometricLockedOut || !_showBiometric) return;
 
@@ -336,7 +342,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     setState(() => _isBiometricLoading = false);
 
     if (success) {
-      // Reset fail counter on success
       _biometricFailCount = 0;
       final displayName = authVM.currentUser?.displayName ??
           authVM.currentUser?.email?.split('@').first ??
@@ -353,21 +358,15 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       final remaining = _maxBiometricAttempts - _biometricFailCount;
 
       if (_biometricFailCount >= _maxBiometricAttempts) {
-        // ── Lockout: hide button, force password entry ──────────────────────
         setState(() {
           _showBiometric = false;
           _biometricLockedOut = true;
         });
         _showBiometricLockedSnackbar();
-
-        // Focus the password field so the user can immediately type
         Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) {
-            FocusScope.of(context).requestFocus(_passFocus);
-          }
+          if (mounted) FocusScope.of(context).requestFocus(_passFocus);
         });
       } else {
-        // Show remaining attempts warning
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Row(children: [
             const Icon(Icons.fingerprint_rounded,
@@ -750,7 +749,8 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
             _buildGoogleButton(isDark),
 
-            // ── Biometric button ─────────────────────────────────────────────
+            // ── Biometric button — shown only when device supports it
+            // AND the user has enabled it in Profile ─────────────────────────
             if (_showBiometric) ...[
               const SizedBox(height: 12),
               _buildBiometricButton(),
