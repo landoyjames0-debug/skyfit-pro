@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../repositories/auth_repository.dart';
 import '../services/storage_service.dart';
 import '../services/local_auth_service.dart';
+import '../services/biometric_web_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repo = AuthRepository();
   final StorageService _storage = StorageService();
   final LocalAuthService _localAuth = LocalAuthService();
+  final BiometricWebService _webBiometric = BiometricWebService();
 
   bool _isLoggedIn = false;
   bool _isLoading = true;
@@ -72,7 +76,6 @@ class AuthViewModel extends ChangeNotifier {
   // ─── Email Login ───────────────────────────────────────────────────────────
   Future<bool> loginWithEmail(String email, String password) async {
     _clearErrorAndSetLoading();
-
     try {
       await _repo.loginWithEmail(email: email, password: password);
       _isLoading = false;
@@ -94,7 +97,6 @@ class AuthViewModel extends ChangeNotifier {
     String? name,
   }) async {
     _clearErrorAndSetLoading();
-
     try {
       final cred = await _repo.registerWithEmail(
         email: email,
@@ -118,7 +120,6 @@ class AuthViewModel extends ChangeNotifier {
   // ─── Google Sign-In ────────────────────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
     _clearErrorAndSetLoading();
-
     try {
       final cred = await _repo.signInWithGoogle();
       if (cred == null) {
@@ -140,7 +141,21 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   // ─── Biometrics ────────────────────────────────────────────────────────────
+
+  /// Checks if the current platform supports biometric authentication.
+  /// - Web  → checks if browser supports WebAuthn (Passkeys)
+  /// - Mobile → checks if device has fingerprint / face enrolled
+  Future<bool> isBiometricAvailable() async {
+    if (kIsWeb) return _webBiometric.isSupported();
+    return await _localAuth.isAvailable();
+  }
+
+  /// Performs biometric authentication.
+  /// - Web    → calls WebAuthn JS `authenticateWithBiometric()`
+  /// - Mobile → calls local_auth, respecting lockout guard
   Future<bool> authenticateWithBiometrics() async {
+    if (kIsWeb) return await _webBiometric.authenticate();
+
     if (_localAuth.isLocked) {
       _setError('Too many failed attempts. Please use password.');
       return false;
@@ -148,11 +163,30 @@ class AuthViewModel extends ChangeNotifier {
     return await _localAuth.authenticate();
   }
 
-  Future<bool> isBiometricAvailable() => _localAuth.isAvailable();
+  /// Web only — registers a new passkey for [userId].
+  /// Returns the base64 credential ID on success, null on failure or if called on mobile.
+  Future<String?> registerWebBiometric(String userId) async {
+    if (!kIsWeb) return null;
+    return await _webBiometric.register(userId);
+  }
 
   // ─── Sign Out ──────────────────────────────────────────────────────────────
+  // IMPORTANT: We preserve 'last_user_uid' in SharedPreferences BEFORE
+  // calling _storage.clearAll(), so the login screen can still read it
+  // to check if the user had biometrics enabled.
   Future<void> signOut() async {
+    // 1. Grab the UID before we wipe anything
+    final uid = _repo.currentUser?.uid;
+
+    // 2. Clear auth storage (tokens, session data, etc.)
     await Future.wait([_storage.clearAll(), _repo.signOut()]);
+
+    // 3. Re-save the UID so the login screen can use it
+    if (uid != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_user_uid', uid);
+    }
+
     _isLoggedIn = false;
     notifyListeners();
   }
@@ -193,7 +227,6 @@ class AuthViewModel extends ChangeNotifier {
 
   // ─── Firebase Error Parser ─────────────────────────────────────────────────
   String _parseAuthError(String error) {
-    // FIX: renamed _errorMap → errorMap (no leading underscore for locals)
     const Map<String, String> errorMap = {
       'user-not-found': 'No account found with this email.',
       'wrong-password': 'Incorrect password.',

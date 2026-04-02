@@ -453,12 +453,16 @@ class _ProfileViewState extends State<ProfileView>
   }
 
   // ── Biometric state ────────────────────────────────────────────────────────
+  // Loads both hardware availability AND user preference for both web and mobile.
+  // On web: checks WebAuthn browser support.
+  // On mobile: checks local_auth hardware enrollment.
   Future<void> _loadBiometricState() async {
-    if (kIsWeb) return;
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
+
     final available = await authVM.isBiometricAvailable();
     final enabled = await userVM.isBiometricEnabled();
+
     if (!mounted) return;
     setState(() {
       _biometricAvailable = available;
@@ -685,24 +689,27 @@ class _ProfileViewState extends State<ProfileView>
   // ── Biometric toggle ───────────────────────────────────────────────────────
   Future<void> _confirmToggleBiometric(bool value) async {
     if (_biometricLoading) return;
-    if (kIsWeb) {
-      _showSnack('Biometrics are not supported on web.', isError: true);
-      return;
-    }
+
+    // If biometrics are not supported on this device/browser, bail with feedback
     if (!_biometricAvailable) {
       _showSnack('Biometrics not available on this device.', isError: true);
       return;
     }
+
     final dark = _T.isDark(context);
     final confirmed = await _showConfirmModal(context,
         dark: dark,
         icon: Icons.fingerprint_rounded,
         iconColor: value ? _T.cyan : _T.amber,
-        title: value ? 'Enable Biometric Login?' : 'Disable Biometric Login?',
+        title: value
+            ? (kIsWeb ? 'Register a Passkey?' : 'Enable Biometric Login?')
+            : 'Disable Biometric Login?',
         subtitle: value
-            ? "You'll be able to sign in using your fingerprint or face ID."
+            ? (kIsWeb
+                ? "Your browser will prompt you to create a passkey. You'll use it to sign in next time."
+                : "You'll be able to sign in using your fingerprint or face ID.")
             : 'You will no longer be able to use biometrics to sign in.',
-        confirmLabel: value ? 'Enable' : 'Disable',
+        confirmLabel: value ? (kIsWeb ? 'Register' : 'Enable') : 'Disable',
         confirmColor: value ? _T.cyan : _T.amber);
     if (!confirmed || !mounted) return;
     await _toggleBiometric(value);
@@ -712,33 +719,75 @@ class _ProfileViewState extends State<ProfileView>
     setState(() => _biometricLoading = true);
     try {
       if (value) {
-        _biometricFailCount = 0;
-        bool authenticated = false;
-        while (_biometricFailCount < _maxBiometricAttempts) {
-          authenticated =
-              await context.read<AuthViewModel>().authenticateWithBiometrics();
-          if (authenticated) break;
-          _biometricFailCount++;
-          if (!mounted) return;
-          if (_biometricFailCount >= _maxBiometricAttempts) {
-            _showSnack(
-                'Biometric failed $_maxBiometricAttempts times. Please use your password.',
+        // ── Enabling biometrics ──────────────────────────────────────────────
+        if (kIsWeb) {
+          // Web path: register a new passkey via WebAuthn
+          // The user's UID is used as the passkey identity
+          final uid = context.read<AuthViewModel>().currentUser?.uid;
+          if (uid == null) {
+            _showSnack('Could not identify user. Please sign in again.',
                 isError: true);
             return;
           }
-          final remaining = _maxBiometricAttempts - _biometricFailCount;
-          _showSnack(
-              'Biometric failed. $remaining attempt${remaining == 1 ? '' : 's'} remaining.',
-              isError: true);
+          final credId =
+              await context.read<AuthViewModel>().registerWebBiometric(uid);
+          if (!mounted) return;
+          if (credId == null) {
+            // User cancelled the browser prompt or it failed
+            _showSnack(
+                'Passkey registration cancelled or failed. Please try again.',
+                isError: true);
+            return;
+          }
+          // Passkey registered — persist the enabled state
+          await context.read<UserViewModel>().toggleBiometric(true);
+          if (!mounted) return;
+          setState(() => _biometricEnabled = true);
+          _showSnack('Passkey registered! Use it to sign in next time.',
+              isError: false);
+        } else {
+          // Mobile path: verify biometric before enabling
+          // Uses the same 3-attempt lockout as the login screen
+          _biometricFailCount = 0;
+          bool authenticated = false;
+
+          while (_biometricFailCount < _maxBiometricAttempts) {
+            authenticated = await context
+                .read<AuthViewModel>()
+                .authenticateWithBiometrics();
+            if (!mounted) return;
+
+            if (authenticated) break;
+
+            _biometricFailCount++;
+            if (_biometricFailCount >= _maxBiometricAttempts) {
+              _showSnack(
+                  'Biometric failed $_maxBiometricAttempts times. Please use your password.',
+                  isError: true);
+              return;
+            }
+            final remaining = _maxBiometricAttempts - _biometricFailCount;
+            _showSnack(
+                'Biometric failed. $remaining attempt${remaining == 1 ? '' : 's'} remaining.',
+                isError: true);
+          }
+
+          if (!authenticated) return;
+
+          // Biometric verified — save enabled state
+          await context.read<UserViewModel>().toggleBiometric(true);
+          if (!mounted) return;
+          setState(() => _biometricEnabled = true);
+          _showSnack('Biometric login enabled!', isError: false);
         }
-        if (!authenticated) return;
+      } else {
+        // ── Disabling biometrics ─────────────────────────────────────────────
+        // No biometric verification needed to disable — just update the preference
+        await context.read<UserViewModel>().toggleBiometric(false);
+        if (!mounted) return;
+        setState(() => _biometricEnabled = false);
+        _showSnack('Biometric login disabled.', isError: false);
       }
-      await context.read<UserViewModel>().toggleBiometric(value);
-      if (!mounted) return;
-      setState(() => _biometricEnabled = value);
-      _showSnack(
-          value ? 'Biometric login enabled!' : 'Biometric login disabled.',
-          isError: false);
     } catch (_) {
       _showSnack('Failed to update biometric setting.', isError: true);
     } finally {
@@ -1523,7 +1572,6 @@ class _ProfileViewState extends State<ProfileView>
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      // FIX: replaced deprecated `value:` with `initialValue:`
       value: value,
       style: TextStyle(color: _T.textPrimary(dark), fontSize: 14),
       dropdownColor: _T.cardBg(dark),
@@ -1566,9 +1614,27 @@ class _ProfileViewState extends State<ProfileView>
   }
 
   // ── Security card ──────────────────────────────────────────────────────────
+  // Now works for both web (passkeys) and mobile (fingerprint/face).
+  // The toggle is only disabled if the device/browser has no biometric support.
   Widget _buildSecurityCard(bool dark) {
-    final biometricActive = !kIsWeb && _biometricAvailable && _biometricEnabled;
-    final biometricDisabled = kIsWeb || !_biometricAvailable;
+    final biometricActive = _biometricAvailable && _biometricEnabled;
+    final biometricDisabled = !_biometricAvailable;
+
+    // Label text adapts to platform and state
+    String biometricSubtitle;
+    if (!_biometricAvailable) {
+      biometricSubtitle = kIsWeb
+          ? 'Your browser does not support passkeys'
+          : 'Not available on this device';
+    } else if (kIsWeb) {
+      biometricSubtitle = _biometricEnabled
+          ? 'Passkey registered — used on login'
+          : 'Tap to register a passkey for this browser';
+    } else {
+      biometricSubtitle = _biometricEnabled
+          ? 'Enabled — shown on login screen'
+          : 'Tap to enable fingerprint login';
+    }
 
     return _card(dark,
         child:
@@ -1597,35 +1663,33 @@ class _ProfileViewState extends State<ProfileView>
                       color: (biometricActive ? _T.cyan : _T.textMuted(dark))
                           .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10)),
-                  child: Icon(Icons.fingerprint_rounded,
-                      color: biometricDisabled
-                          ? _T.textMuted(dark)
-                          : biometricActive
-                              ? _T.cyan
-                              : _T.textSecondary(dark),
-                      size: 22),
+                  child: Icon(
+                    kIsWeb ? Icons.key_rounded : Icons.fingerprint_rounded,
+                    color: biometricDisabled
+                        ? _T.textMuted(dark)
+                        : biometricActive
+                            ? _T.cyan
+                            : _T.textSecondary(dark),
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                     child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      Text('Biometric Login',
-                          style: TextStyle(
-                              color: biometricDisabled
-                                  ? _T.textMuted(dark)
-                                  : _T.textPrimary(dark),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600)),
+                      Text(
+                        kIsWeb ? 'Passkey Login' : 'Biometric Login',
+                        style: TextStyle(
+                            color: biometricDisabled
+                                ? _T.textMuted(dark)
+                                : _T.textPrimary(dark),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600),
+                      ),
                       const SizedBox(height: 2),
                       Text(
-                        kIsWeb
-                            ? 'Not available on web'
-                            : !_biometricAvailable
-                                ? 'Not available on this device'
-                                : _biometricEnabled
-                                    ? 'Enabled — shown on login screen'
-                                    : 'Tap to enable fingerprint login',
+                        biometricSubtitle,
                         style: TextStyle(
                             color: biometricDisabled
                                 ? _T.textMuted(dark)

@@ -56,7 +56,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
   -->
 
-  <!-- Firebase Initialization -->
+  <!-- ① Firebase Initialization — self-contained, closed properly -->
   <script>
     // NOTE: These values are safe to expose in client-side code.
     // Firebase security is enforced by Firestore/Storage Security Rules,
@@ -76,6 +76,89 @@
     }
   </script>
 
+  <!-- ② WebAuthn / Passkey support — separate script block -->
+  <script>
+    /** Generates a cryptographically random 32-byte challenge. */
+    function _generateChallenge() {
+      const arr = new Uint8Array(32);
+      crypto.getRandomValues(arr);
+      return arr;
+    }
+
+    /**
+     * Registers a new platform passkey for the given user.
+     * @param {string} userId        - The user's email or UID (used as display name).
+     * @param {number[]} userIdBytes - UTF-8 bytes of the userId (passed from Dart).
+     * @returns {string|null}        - Base64-encoded credential ID, or null on failure.
+     */
+    async function registerBiometric(userId, userIdBytes) {
+      try {
+        const credential = await navigator.credentials.create({
+          publicKey: {
+            challenge: _generateChallenge(),
+            rp: {
+              name: "SkyFit Pro",
+              id: window.location.hostname,
+            },
+            user: {
+              id: new Uint8Array(userIdBytes),
+              name: userId,
+              displayName: userId,
+            },
+            pubKeyCredParams: [
+              { type: "public-key", alg: -7   }, // ES256  (preferred)
+              { type: "public-key", alg: -257 }, // RS256  (fallback)
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: "platform", // device biometric only
+              userVerification: "required",
+              residentKey: "preferred",
+            },
+            timeout: 60000,
+          },
+        });
+
+        if (!credential) return null;
+
+        // Convert rawId (ArrayBuffer) → base64 string so Dart can store it
+        const idArray = new Uint8Array(credential.rawId);
+        return btoa(String.fromCharCode(...idArray));
+      } catch (e) {
+        console.error("WebAuthn register error:", e);
+        return null;
+      }
+    }
+
+    /**
+     * Prompts the user to authenticate with a previously registered passkey.
+     * @returns {boolean} - true on success, false on failure or cancellation.
+     */
+    async function authenticateWithBiometric() {
+      try {
+        const credential = await navigator.credentials.get({
+          publicKey: {
+            challenge: _generateChallenge(),
+            userVerification: "required",
+            timeout: 60000,
+          },
+        });
+        return credential != null;
+      } catch (e) {
+        console.error("WebAuthn auth error:", e);
+        return false;
+      }
+    }
+
+    /**
+     * Checks if the browser supports WebAuthn (Passkeys).
+     * @returns {boolean}
+     */
+    function isWebAuthnSupported() {
+      return !!(window.PublicKeyCredential);
+    }
+  </script>
+
+  <!-- ③ Flutter bootstrap — must be last -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

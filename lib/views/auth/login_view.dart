@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import '../../viewmodels/auth_viewmodel.dart';
@@ -17,15 +18,24 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _emailFocus = FocusNode();
+  final _passFocus = FocusNode();
+
   bool _obscurePass = true;
   bool _isLoading = false;
   bool _isBiometricLoading = false;
-  bool _showBiometric = false;
-  Timer? _errorDismissTimer;
 
-  // FIX: biometric attempt tracking (lab requires lockout after 3 failures)
+  // ── Biometric state ────────────────────────────────────────────────────────
+  // The button is only shown when BOTH conditions are true:
+  //   1. The device/browser supports biometrics
+  //   2. The user has explicitly enabled it in Profile (stored in Firestore/prefs)
+  // It is hidden permanently for the session after 3 failed attempts.
+  bool _showBiometric = false;
+  bool _biometricLockedOut = false; // true after 3 failures → forces password
   int _biometricFailCount = 0;
   static const int _maxBiometricAttempts = 3;
+
+  Timer? _errorDismissTimer;
 
   late AnimationController _bgAnimController;
   late AnimationController _fadeController;
@@ -40,6 +50,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+
     _bgAnimController =
         AnimationController(vsync: this, duration: const Duration(seconds: 12))
           ..repeat();
@@ -60,17 +71,57 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     _buttonScaleAnim = Tween<double>(begin: 1.0, end: 0.96).animate(
         CurvedAnimation(
             parent: _buttonPressController, curve: Curves.easeInOut));
+
     _fadeController.forward();
     _slideController.forward();
-    _checkBiometricAvailability();
+
+    // Check biometric availability after first frame so context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkBiometricAvailability();
+    });
   }
 
+  // ── Biometric visibility logic ─────────────────────────────────────────────
+  // Flow:
+  //   1. Check device/browser supports biometrics
+  //   2. Resolve the UID — use active Firebase session first,
+  //      then fall back to 'last_user_uid' saved at sign-out
+  //   3. Load that user's Firestore doc to read their biometric preference
+  //   4. Show button only if all checks pass
   Future<void> _checkBiometricAvailability() async {
+    if (!mounted) return;
+
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
+
+    // 1. Hardware / browser capability check
     final deviceSupports = await authVM.isBiometricAvailable();
+    if (!deviceSupports) {
+      if (mounted) setState(() => _showBiometric = false);
+      return;
+    }
+
+    // 2. Resolve UID — active session OR last known user after sign-out
+    final prefs = await SharedPreferences.getInstance();
+    final uid = authVM.currentUser?.uid ?? prefs.getString('last_user_uid');
+
+    if (uid == null) {
+      // Truly brand-new install, never logged in before
+      if (mounted) setState(() => _showBiometric = false);
+      return;
+    }
+
+    // 3. Load user document so isBiometricEnabled() can read Firestore
+    await userVM.loadUser(uid);
+
+    // 4. Read the user's saved preference
     final userEnabled = await userVM.isBiometricEnabled();
-    if (mounted) setState(() => _showBiometric = deviceSupports && userEnabled);
+
+    if (mounted) {
+      setState(() {
+        _showBiometric = deviceSupports && userEnabled && !_biometricLockedOut;
+      });
+    }
   }
 
   void _scheduleErrorDismiss() {
@@ -84,6 +135,8 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _emailFocus.dispose();
+    _passFocus.dispose();
     _errorDismissTimer?.cancel();
     _bgAnimController.dispose();
     _fadeController.dispose();
@@ -93,6 +146,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  // ── Login success modal ────────────────────────────────────────────────────
   Future<void> _showLoginSuccessModal(String name) async {
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 400;
@@ -211,6 +265,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     );
   }
 
+  // ── Email login ────────────────────────────────────────────────────────────
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
@@ -240,6 +295,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     }
   }
 
+  // ── Google sign-in ─────────────────────────────────────────────────────────
   Future<void> _googleSignIn() async {
     setState(() => _isLoading = true);
     final authVM = context.read<AuthViewModel>();
@@ -249,7 +305,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     setState(() => _isLoading = false);
     if (success && mounted) {
       await userVM.loadUser(authVM.currentUser?.uid ?? '');
-      // FIX: use currentUser.email as fallback, not the (possibly empty) email field
       final displayName = authVM.currentUser?.displayName ??
           authVM.currentUser?.email?.split('@').first ??
           'Athlete';
@@ -263,23 +318,25 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     }
   }
 
-  // FIX: full biometric flow with 3-attempt lockout as required by lab spec
+  // ── Biometric authentication ───────────────────────────────────────────────
+  // Flow:
+  //   1. Try biometric auth
+  //   2. On success → navigate to Home (no full re-login needed)
+  //   3. On failure → increment counter, show remaining attempts
+  //   4. After 3 failures → lock out, hide button, focus password field
   Future<void> _onBiometricPressed() async {
-    // Guard: already locked out
-    if (_biometricFailCount >= _maxBiometricAttempts) {
-      _showBiometricLockedSnackbar();
-      return;
-    }
+    if (_biometricLockedOut || !_showBiometric) return;
 
     setState(() => _isBiometricLoading = true);
     final authVM = context.read<AuthViewModel>();
     final nav = Navigator.of(context);
+
     final success = await authVM.authenticateWithBiometrics();
     if (!mounted) return;
     setState(() => _isBiometricLoading = false);
 
     if (success) {
-      // Reset counter on success
+      // Reset fail counter on success
       _biometricFailCount = 0;
       final displayName = authVM.currentUser?.displayName ??
           authVM.currentUser?.email?.split('@').first ??
@@ -296,9 +353,19 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       final remaining = _maxBiometricAttempts - _biometricFailCount;
 
       if (_biometricFailCount >= _maxBiometricAttempts) {
-        // Lockout: hide the biometric button and force password
-        setState(() => _showBiometric = false);
+        // ── Lockout: hide button, force password entry ──────────────────────
+        setState(() {
+          _showBiometric = false;
+          _biometricLockedOut = true;
+        });
         _showBiometricLockedSnackbar();
+
+        // Focus the password field so the user can immediately type
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            FocusScope.of(context).requestFocus(_passFocus);
+          }
+        });
       } else {
         // Show remaining attempts warning
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -325,6 +392,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 
   void _showBiometricLockedSnackbar() {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: const Row(children: [
         Icon(Icons.lock_rounded, color: Colors.white, size: 18),
@@ -344,10 +412,10 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     ));
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    // FIX: derive dark from Theme so LoginView respects the app-wide theme
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -355,7 +423,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // FIX: theme-aware background — dark gets animated orbs, light gets subtle version
           isDark
               ? _AnimatedBackground(controller: _bgAnimController, size: size)
               : _LightAnimatedBackground(
@@ -454,7 +521,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
         Text(
           'YOUR PERSONALIZED FITNESS COMPANION',
           style: TextStyle(
-              // FIX: adapt subtitle color to theme
               color: isDark
                   ? Colors.white.withValues(alpha: 0.35)
                   : const Color(0xFF5A6A7A),
@@ -476,7 +542,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          // FIX: theme-aware card background
           color: isDark ? null : Colors.white,
           gradient: isDark
               ? LinearGradient(
@@ -523,12 +588,15 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
             _buildInputField(
               controller: _emailCtrl,
+              focusNode: _emailFocus,
               label: 'Email Address',
               icon: Icons.alternate_email_rounded,
               isDark: isDark,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.email],
+              onSubmitted: (_) =>
+                  FocusScope.of(context).requestFocus(_passFocus),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Email is required';
                 if (!v.contains('@')) return 'Enter a valid email';
@@ -539,6 +607,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
             _buildInputField(
               controller: _passCtrl,
+              focusNode: _passFocus,
               label: 'Password',
               icon: Icons.lock_outline_rounded,
               isDark: isDark,
@@ -565,9 +634,42 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
                   (v == null || v.isEmpty) ? 'Password is required' : null,
             ),
 
+            // ── Lockout hint banner ──────────────────────────────────────────
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: _biometricLockedOut
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF8C42).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: const Color(0xFFFF8C42)
+                                  .withValues(alpha: 0.4)),
+                        ),
+                        child: const Row(children: [
+                          Icon(Icons.lock_outline_rounded,
+                              color: Color(0xFFFF8C42), size: 15),
+                          SizedBox(width: 8),
+                          Expanded(
+                              child: Text(
+                            'Biometrics locked. Enter your password to continue.',
+                            style: TextStyle(
+                                color: Color(0xFFFF8C42), fontSize: 12),
+                          )),
+                        ]),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+
             const SizedBox(height: 16),
 
-            // Error banner
+            // ── Error banner ─────────────────────────────────────────────────
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -648,6 +750,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
             _buildGoogleButton(isDark),
 
+            // ── Biometric button ─────────────────────────────────────────────
             if (_showBiometric) ...[
               const SizedBox(height: 12),
               _buildBiometricButton(),
@@ -727,7 +830,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
         height: 52,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          // FIX: theme-aware Google button
           color: isDark
               ? Colors.white.withValues(alpha: 0.05)
               : const Color(0xFFF7F9FC),
@@ -769,7 +871,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 
   Widget _buildBiometricButton() {
-    // FIX: show remaining attempts as a sub-label when failures have occurred
     final remaining = _maxBiometricAttempts - _biometricFailCount;
     final hasFailures = _biometricFailCount > 0;
 
@@ -864,6 +965,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
   Widget _buildInputField({
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String label,
     required IconData icon,
     required bool isDark,
@@ -877,12 +979,12 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscureText,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       autofillHints: autofillHints,
       onFieldSubmitted: onSubmitted,
-      // FIX: theme-aware text color
       style: TextStyle(
           color: isDark ? Colors.white : const Color(0xFF0F1923), fontSize: 14),
       decoration: InputDecoration(
@@ -931,7 +1033,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 }
 
-// ── Dark animated background (original) ──────────────────────────────────────
+// ── Dark animated background ──────────────────────────────────────────────────
 class _AnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
@@ -946,7 +1048,6 @@ class _AnimatedBackground extends StatelessWidget {
   }
 }
 
-// FIX: light mode background for LoginView (matches HomeView's _LightBackground)
 class _LightAnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
