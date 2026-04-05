@@ -11,6 +11,7 @@ import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/user_viewmodel.dart';
 import '../viewmodels/weather_viewmodel.dart';
 import 'auth/login_view.dart';
+import '../services/local_auth_service.dart';
 
 // ─── Theme helpers ────────────────────────────────────────────────────────────
 class _T {
@@ -752,14 +753,30 @@ class _ProfileViewState extends State<ProfileView>
           _biometricFailCount = 0;
           bool authenticated = false;
 
+          // REPLACE WITH (new code)
           while (_biometricFailCount < _maxBiometricAttempts) {
-            authenticated = await context
+            final result = await context
                 .read<AuthViewModel>()
                 .authenticateWithBiometrics();
             if (!mounted) return;
 
-            if (authenticated) break;
+            if (result == BiometricResult.success) {
+              authenticated = true;
+              break;
+            }
 
+            if (result == BiometricResult.cancelled) {
+              // User dismissed the prompt — exit silently, no count change
+              return;
+            }
+
+            if (result == BiometricResult.locked) {
+              _showSnack('Biometric locked. Please use your password.',
+                  isError: true);
+              return;
+            }
+
+            // BiometricResult.failed — real fingerprint rejection
             _biometricFailCount++;
             if (_biometricFailCount >= _maxBiometricAttempts) {
               _showSnack(

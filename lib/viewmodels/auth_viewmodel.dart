@@ -34,6 +34,9 @@ class AuthViewModel extends ChangeNotifier {
 
   // ─── Initialization ────────────────────────────────────────────────────────
   Future<void> _init() async {
+    // Clear any stale in-memory lock from a previous session
+    _localAuth.resetAttempts();
+
     final saved = await _storage.getThemeMode();
     _themeMode = switch (saved) {
       'dark' => ThemeMode.dark,
@@ -144,59 +147,60 @@ class AuthViewModel extends ChangeNotifier {
   // ─── Biometrics ────────────────────────────────────────────────────────────
 
   /// Checks if the current platform supports biometric authentication.
-  /// - Web  → checks if browser supports WebAuthn (Passkeys)
-  /// - Mobile → checks if device has fingerprint / face enrolled
   Future<bool> isBiometricAvailable() async {
     if (kIsWeb) return _webBiometric.isSupported();
     return await _localAuth.isAvailable();
   }
 
-  /// Performs biometric authentication.
-  /// - Web    → calls WebAuthn JS `authenticateWithBiometricDetailed(credId)` if credId available
-  /// - Mobile → calls local_auth, respecting lockout guard
-  Future<bool> authenticateWithBiometrics({UserViewModel? userVM}) async {
+  /// Performs biometric authentication and returns a typed [BiometricResult]
+  /// so callers can distinguish success / failed / cancelled / locked
+  /// without inferring meaning from a bare bool.
+  Future<BiometricResult> authenticateWithBiometrics(
+      {UserViewModel? userVM}) async {
     if (kIsWeb) {
       if (userVM?.user?.webCredentialId == null) {
-        // ignore: avoid_print
-        print('Web biometrics: No credential ID found, skipping');
-        return false;
+        debugPrint(
+            '[AuthViewModel] Web biometrics: no credential ID, skipping');
+        return BiometricResult.unavailable;
       }
-      return await _webBiometric
+      final ok = await _webBiometric
           .authenticateDetailed(userVM!.user!.webCredentialId!);
+      return ok ? BiometricResult.success : BiometricResult.failed;
     }
 
     if (_localAuth.isLocked) {
-      _setError('Too many failed attempts. Please use password.');
-      return false;
+      _setError('Too many failed attempts. Please use your password.');
+      return BiometricResult.locked;
     }
+
     return await _localAuth.authenticate();
   }
 
-  /// Web only — registers a new passkey for [userId] and saves credential ID to Firestore.
-  /// Returns the base64 credential ID on success, null on failure.
+  /// Web only — registers a new passkey for [userId] and saves credential ID
+  /// to Firestore. Returns the base64 credential ID on success, null on failure.
   Future<String?> registerWebBiometric(
       String userId, UserViewModel userVM) async {
     if (!kIsWeb) return null;
     final credId = await _webBiometric.register(userId);
     if (credId == null || userVM.user == null) return null;
-
-    // Save credential ID to Firestore
     await userVM.updateProfile({'webCredentialId': credId});
     return credId;
   }
 
+  /// Resets the local biometric fail counter — call this after successful
+  /// login or when the user re-enables biometrics from profile settings.
+  void resetLocalAuthAttempts() => _localAuth.resetAttempts();
+
   // ─── Sign Out ──────────────────────────────────────────────────────────────
-  // IMPORTANT: We preserve 'last_user_uid' in SharedPreferences BEFORE
-  // calling _storage.clearAll(), so the login screen can still read it
-  // to check if the user had biometrics enabled.
   Future<void> signOut() async {
-    // 1. Grab the UID before we wipe anything
     final uid = _repo.currentUser?.uid;
 
-    // 2. Clear auth storage (tokens, session data, etc.)
+    // Reset biometric lock so the next login session starts clean
+    _localAuth.resetAttempts();
+
     await Future.wait([_storage.clearAll(), _repo.signOut()]);
 
-    // 3. Re-save the UID so the login screen can use it
+    // Re-save UID so the login screen can check biometric preference
     if (uid != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_user_uid', uid);

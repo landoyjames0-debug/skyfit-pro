@@ -2,17 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 
+enum BiometricResult { success, failed, cancelled, locked, unavailable }
+
 class LocalAuthService {
-  // Only instantiate LocalAuthentication on non-web platforms.
-  // local_auth is not supported on web and will throw at runtime if used.
   final LocalAuthentication? _auth = kIsWeb ? null : LocalAuthentication();
 
   int _failedAttempts = 0;
   static const int maxAttempts = 3;
 
-  // ─── Availability ──────────────────────────────────────────────────────────
+  bool get isLocked => _failedAttempts >= maxAttempts;
+
+  void resetAttempts() => _failedAttempts = 0;
+
   Future<bool> isAvailable() async {
-    if (kIsWeb) return false; // biometrics not supported on web
+    if (kIsWeb) return false;
     try {
       return await _auth!.canCheckBiometrics && await _auth.isDeviceSupported();
     } on PlatformException {
@@ -20,14 +23,10 @@ class LocalAuthService {
     }
   }
 
-  // ─── Authenticate ──────────────────────────────────────────────────────────
-  Future<bool> authenticate() async {
-    // On web: biometrics are not available — return true to allow through
-    // gracefully without crashing. The UI should never show a biometric
-    // button on web since isAvailable() returns false.
-    if (kIsWeb) return true;
+  Future<BiometricResult> authenticate() async {
+    if (kIsWeb) return BiometricResult.unavailable;
 
-    if (_failedAttempts >= maxAttempts) return false;
+    if (_failedAttempts >= maxAttempts) return BiometricResult.locked;
 
     try {
       final success = await _auth!.authenticate(
@@ -37,22 +36,34 @@ class LocalAuthService {
           stickyAuth: true,
         ),
       );
+
       if (success) {
         _failedAttempts = 0;
-      } else {
-        _failedAttempts++;
+        return BiometricResult.success;
       }
-      return success;
-    } on PlatformException catch (e) {
-      // Handle specific platform errors gracefully
-      debugPrint(
-          '[LocalAuthService] PlatformException: ${e.code} - ${e.message}');
+
+      // Distinguish real failure from user cancellation:
+      // if the sensor is still available, the user actively rejected.
+      final stillAvailable =
+          await _auth.canCheckBiometrics && await _auth.isDeviceSupported();
+
+      if (!stillAvailable) return BiometricResult.cancelled;
+
       _failedAttempts++;
-      return false;
+      return BiometricResult.failed;
+    } on PlatformException catch (e) {
+      debugPrint('[LocalAuthService] ${e.code}: ${e.message}');
+      const cancelCodes = {
+        'NotAvailable',
+        'NotEnrolled',
+        'LockedOut',
+        'PermanentlyLockedOut',
+        'SystemCancel',
+        'UserCancel',
+      };
+      if (cancelCodes.contains(e.code)) return BiometricResult.cancelled;
+      _failedAttempts++;
+      return BiometricResult.failed;
     }
   }
-
-  // ─── State ─────────────────────────────────────────────────────────────────
-  bool get isLocked => _failedAttempts >= maxAttempts;
-  void resetAttempts() => _failedAttempts = 0;
 }

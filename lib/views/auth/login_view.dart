@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/user_viewmodel.dart';
+import '../../services/local_auth_service.dart';
 import 'register_view.dart';
 import '../home_view.dart';
 
@@ -81,7 +82,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     }
   }
 
-  // FIX: Read last_user_uid from SharedPreferences when currentUser is null (after logout)
   Future<void> _checkBiometricAvailability() async {
     if (!mounted) return;
 
@@ -90,7 +90,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
 
-    // 1. Hardware / browser capability check
     final deviceSupports = await authVM.isBiometricAvailable();
     if (!deviceSupports) {
       if (mounted) {
@@ -102,7 +101,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       return;
     }
 
-    // 2. FIX: Try currentUser first, then fall back to last_user_uid saved on logout
     String? uid = authVM.currentUser?.uid;
     if (uid == null) {
       final prefs = await SharedPreferences.getInstance();
@@ -119,10 +117,8 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       return;
     }
 
-    // 3. Load user document so isBiometricEnabled() reads Firestore model
     await userVM.loadUser(uid);
 
-    // 4. Read saved preference (prioritizes Firestore _user)
     final userEnabled = await userVM.isBiometricEnabled();
 
     if (mounted) {
@@ -325,63 +321,88 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 
   Future<void> _onBiometricPressed() async {
-    if (_biometricLockedOut || !_showBiometric) return;
+    if (_biometricLockedOut || !_showBiometric || _isBiometricLoading) return;
 
     setState(() => _isBiometricLoading = true);
+
     final authVM = context.read<AuthViewModel>();
+    final userVM = context.read<UserViewModel>();
     final nav = Navigator.of(context);
 
-    final userVM = context.read<UserViewModel>();
-    final success = await authVM.authenticateWithBiometrics(userVM: userVM);
+    final result = await authVM.authenticateWithBiometrics(userVM: userVM);
+
     if (!mounted) return;
     setState(() => _isBiometricLoading = false);
 
-    if (success) {
-      _biometricFailCount = 0;
-      final displayName = authVM.currentUser?.displayName ??
-          authVM.currentUser?.email?.split('@').first ??
-          'Athlete';
-      await _showLoginSuccessModal(displayName);
-      if (mounted) {
-        nav.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeView()),
-          (route) => false,
-        );
-      }
-    } else {
-      _biometricFailCount++;
-      final remaining = _maxBiometricAttempts - _biometricFailCount;
+    switch (result) {
+      case BiometricResult.success:
+        // Reset fail state and navigate
+        _biometricFailCount = 0;
+        final displayName = authVM.currentUser?.displayName ??
+            authVM.currentUser?.email?.split('@').first ??
+            'Athlete';
+        await _showLoginSuccessModal(displayName);
+        if (mounted) {
+          nav.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomeView()),
+            (route) => false,
+          );
+        }
 
-      if (_biometricFailCount >= _maxBiometricAttempts) {
+      case BiometricResult.cancelled:
+        // User dismissed the OS prompt — silent, no count change, no snackbar
+        break;
+
+      case BiometricResult.failed:
+        // Only here do we increment — a real fingerprint rejection happened
+        _biometricFailCount++;
+        final remaining = _maxBiometricAttempts - _biometricFailCount;
+
+        if (_biometricFailCount >= _maxBiometricAttempts) {
+          setState(() {
+            _showBiometric = false;
+            _biometricLockedOut = true;
+          });
+          _showBiometricLockedSnackbar();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) FocusScope.of(context).requestFocus(_passFocus);
+          });
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Row(children: [
+                const Icon(Icons.fingerprint_rounded,
+                    color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Fingerprint not recognised. '
+                    '$remaining attempt${remaining == 1 ? '' : 's'} remaining.',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ]),
+              backgroundColor: const Color(0xFFFF8C42),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
+            ));
+          }
+        }
+
+      case BiometricResult.locked:
+        // Shouldn't reach here due to guard at the top, but handle defensively
         setState(() {
           _showBiometric = false;
           _biometricLockedOut = true;
         });
         _showBiometricLockedSnackbar();
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) FocusScope.of(context).requestFocus(_passFocus);
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.fingerprint_rounded,
-                color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Biometric failed. $remaining attempt${remaining == 1 ? '' : 's'} remaining.',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ]),
-          backgroundColor: const Color(0xFFFF8C42),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 3),
-        ));
-      }
+
+      case BiometricResult.unavailable:
+        // Web credential missing or sensor gone — hide button silently
+        setState(() => _showBiometric = false);
     }
   }
 
@@ -1014,6 +1035,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 }
 
+// ─── Animated dark background ──────────────────────────────────────────────────
 class _AnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
