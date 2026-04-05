@@ -731,8 +731,9 @@ class _ProfileViewState extends State<ProfileView>
                 isError: true);
             return;
           }
-          final credId =
-              await context.read<AuthViewModel>().registerWebBiometric(uid);
+          final credId = await context
+              .read<AuthViewModel>()
+              .registerWebBiometric(uid, context.read<UserViewModel>());
           if (!mounted) return;
           if (credId == null) {
             _showSnack(
@@ -795,7 +796,8 @@ class _ProfileViewState extends State<ProfileView>
         }
       } else {
         // ── Disabling biometrics ─────────────────────────────────────────────
-        await context.read<UserViewModel>().toggleBiometric(false);
+        await context.read<UserViewModel>().updateProfile(
+            {'biometricEnabled': false, 'webCredentialId': null});
         if (!mounted) return;
 
         // FIX: re-read from source of truth after disabling too
@@ -1593,7 +1595,7 @@ class _ProfileViewState extends State<ProfileView>
     required void Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       style: TextStyle(color: _T.textPrimary(dark), fontSize: 14),
       dropdownColor: _T.cardBg(dark),
       icon: Icon(Icons.keyboard_arrow_down_rounded,

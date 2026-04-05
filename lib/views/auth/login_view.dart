@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import '../../viewmodels/auth_viewmodel.dart';
@@ -109,10 +108,8 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       return;
     }
 
-    // 2. Resolve UID — active session OR last known user after sign-out
-    final prefs = await SharedPreferences.getInstance();
-    final uid = authVM.currentUser?.uid ?? prefs.getString('last_user_uid');
-
+    // 2. Use active Firebase user (login screen should have session)
+    final uid = authVM.currentUser?.uid;
     if (uid == null) {
       if (mounted) {
         setState(() => _showBiometric = false);
@@ -121,11 +118,18 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
       return;
     }
 
-    // 3. Load user document so isBiometricEnabled() can read Firestore
+    // 3. Load user document so isBiometricEnabled() reads Firestore model
     await userVM.loadUser(uid);
 
-    // 4. Read the user's saved preference fresh from source of truth
+    // 4. Read saved preference (prioritizes Firestore _user)
     final userEnabled = await userVM.isBiometricEnabled();
+
+    if (mounted) {
+      setState(() {
+        _showBiometric = deviceSupports && userEnabled && !_biometricLockedOut;
+        _biometricCheckInProgress = false;
+      });
+    }
 
     if (mounted) {
       setState(() {
@@ -337,7 +341,8 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     final authVM = context.read<AuthViewModel>();
     final nav = Navigator.of(context);
 
-    final success = await authVM.authenticateWithBiometrics();
+    final userVM = context.read<UserViewModel>();
+    final success = await authVM.authenticateWithBiometrics(userVM: userVM);
     if (!mounted) return;
     setState(() => _isBiometricLoading = false);
 

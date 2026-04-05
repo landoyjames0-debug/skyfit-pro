@@ -7,6 +7,7 @@ import '../repositories/auth_repository.dart';
 import '../services/storage_service.dart';
 import '../services/local_auth_service.dart';
 import '../services/biometric_web_service.dart';
+import '../viewmodels/user_viewmodel.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthRepository _repo = AuthRepository();
@@ -151,10 +152,18 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   /// Performs biometric authentication.
-  /// - Web    → calls WebAuthn JS `authenticateWithBiometric()`
+  /// - Web    → calls WebAuthn JS `authenticateWithBiometricDetailed(credId)` if credId available
   /// - Mobile → calls local_auth, respecting lockout guard
-  Future<bool> authenticateWithBiometrics() async {
-    if (kIsWeb) return await _webBiometric.authenticate();
+  Future<bool> authenticateWithBiometrics({UserViewModel? userVM}) async {
+    if (kIsWeb) {
+      if (userVM?.user?.webCredentialId == null) {
+        // ignore: avoid_print
+        print('Web biometrics: No credential ID found, skipping');
+        return false;
+      }
+      return await _webBiometric
+          .authenticateDetailed(userVM!.user!.webCredentialId!);
+    }
 
     if (_localAuth.isLocked) {
       _setError('Too many failed attempts. Please use password.');
@@ -163,11 +172,17 @@ class AuthViewModel extends ChangeNotifier {
     return await _localAuth.authenticate();
   }
 
-  /// Web only — registers a new passkey for [userId].
-  /// Returns the base64 credential ID on success, null on failure or if called on mobile.
-  Future<String?> registerWebBiometric(String userId) async {
+  /// Web only — registers a new passkey for [userId] and saves credential ID to Firestore.
+  /// Returns the base64 credential ID on success, null on failure.
+  Future<String?> registerWebBiometric(
+      String userId, UserViewModel userVM) async {
     if (!kIsWeb) return null;
-    return await _webBiometric.register(userId);
+    final credId = await _webBiometric.register(userId);
+    if (credId == null || userVM.user == null) return null;
+
+    // Save credential ID to Firestore
+    await userVM.updateProfile({'webCredentialId': credId});
+    return credId;
   }
 
   // ─── Sign Out ──────────────────────────────────────────────────────────────

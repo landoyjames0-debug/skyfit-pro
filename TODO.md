@@ -1,28 +1,30 @@
-# Skyfit Pro Debugging TODO
+# Fix Error - Flutter Compile Issues ✅
 
-## Approved Plan Steps (In Progress)
+## Plan Progress (Step-by-Step)
 
-### 1. ✅ [DONE] Create TODO.md to track progress
+### Step 1: Fix primary compile error [✅ DONE]
 
-### 2. 🔄 Edit home_view.dart
+- [x] Added `import 'dart:io';` to `lib/viewmodels/user_viewmodel.dart`
+  - Fixed `File(filePath)` undefined method (mobile profile photo upload)
 
-- Complete ActivityCard constructor (syntax fix)
-- Remove unused \_T.isDark method
+### Step 2: Fix deprecation warnings [✅ DONE]
 
-### 3. 🔄 Edit register_view.dart
+- [x] Updated `DropdownButtonFormField.value → initialValue` in:
+  - `lib/views/profile_view.dart`
+  - `lib/views/register_view.dart`
+- [x] Suppressed dart:js deprecation in `lib/services/biometric_web_service.dart`
+- [x] Removed unused import `shared_preferences` in `lib/views/auth/login_view.dart`
+- [x] Added `// ignore: avoid_print` to print calls
 
-- Remove unused \_profileImagePath field/assignment
-- Fix 2x DropdownButtonFormField: value: → initialValue:
+### Step 3: Verify fixes [IN PROGRESS]
 
-### 4. 🔄 Edit profile_view.dart
+- [ ] Run `flutter analyze`
+- [ ] Run `flutter run -d chrome`
 
-- Fix DropdownButtonFormField: value: → initialValue:
+### Step 4: Test
 
-### 5. 🔄 Verification
+- [ ] Test profile photo upload (mobile simulation + web)
+- [ ] Test dropdowns in profile/register
+- [ ] Test biometrics toggle
 
-- Run `flutter analyze`
-- Test screens (hot reload)
-- Update TODO with results
-- attempt_completion
-
-**Current Status:** Starting file edits...
+**Next**: Run `flutter analyze` to confirm 0 issues → test app → complete!

@@ -150,6 +150,32 @@
     }
 
     /**
+     * Authenticates using specific credential ID.
+     * @param {string} credIdBase64 - Base64 credential ID from Firestore.
+     * @returns {boolean} - true on success.
+     */
+    async function authenticateWithBiometricDetailed(credIdBase64) {
+      try {
+        const idBytes = Uint8Array.from(atob(credIdBase64), c => c.charCodeAt(0));
+        const credential = await navigator.credentials.get({
+          publicKey: {
+            challenge: _generateChallenge(),
+            allowCredentials: [{
+              id: idBytes,
+              type: 'public-key',
+            }],
+            userVerification: "required",
+            timeout: 60000,
+          },
+        });
+        return credential != null;
+      } catch (e) {
+        console.error("WebAuthn detailed auth error:", e);
+        return false;
+      }
+    }
+
+    /**
      * Checks if the browser supports WebAuthn (Passkeys).
      * @returns {boolean}
      */

@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data'; // ← add this
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -63,14 +65,16 @@ class UserViewModel extends ChangeNotifier {
     return await updateProfile({'biometricEnabled': enabled});
   }
 
-  Future<bool> isBiometricEnabled() => _storage.isBiometricEnabled();
+  Future<bool> isBiometricEnabled() async =>
+      _user?.biometricEnabled ?? await _storage.isBiometricEnabled();
 
-  /// Upload via file path (mobile only — uses dart:io File)
+  /// Mobile-only Storage upload (web uses base64)
   Future<void> updateProfilePicture(String filePath) async {
+    if (kIsWeb) return;
     final uid = _user?.uid;
     if (uid == null) throw Exception('No user logged in');
 
-    final file = File(filePath);
+    final fileBytes = await File(filePath).readAsBytes();
     final ext = filePath.split('.').last.toLowerCase();
 
     final storageRef = FirebaseStorage.instance
@@ -78,8 +82,8 @@ class UserViewModel extends ChangeNotifier {
         .child('profile_pictures')
         .child('$uid.$ext');
 
-    final uploadTask = await storageRef.putFile(
-      file,
+    final uploadTask = await storageRef.putData(
+      fileBytes,
       SettableMetadata(contentType: 'image/$ext'),
     );
 
@@ -87,7 +91,7 @@ class UserViewModel extends ChangeNotifier {
     await _persistProfileUrl(uid, downloadUrl);
   }
 
-  /// Upload via raw bytes (works on web + mobile — no dart:io needed in views)
+  /// Web: Base64 image direct to Firestore (free tier OK!)
   Future<void> updateProfilePictureFromBytes(
     Uint8List bytes, {
     String ext = 'jpg',
@@ -95,21 +99,17 @@ class UserViewModel extends ChangeNotifier {
     final uid = _user?.uid;
     if (uid == null) throw Exception('No user logged in');
 
-    final storageRef = FirebaseStorage.instance
-        .ref()
-        .child('profile_pictures')
-        .child('$uid.$ext');
+    final base64Image = 'data:image/$ext;base64,${base64Encode(bytes)}';
 
-    final uploadTask = await storageRef.putData(
-      bytes,
-      SettableMetadata(contentType: 'image/$ext'),
-    );
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .update({'profilePictureUrl': base64Image});
 
-    final downloadUrl = await uploadTask.ref.getDownloadURL();
-    await _persistProfileUrl(uid, downloadUrl);
+    _user = _user!.copyWith(profilePictureUrl: base64Image);
+    notifyListeners();
   }
 
-  /// Shared helper — saves URL to Firestore and refreshes local model
   Future<void> _persistProfileUrl(String uid, String downloadUrl) async {
     await FirebaseFirestore.instance
         .collection('users')

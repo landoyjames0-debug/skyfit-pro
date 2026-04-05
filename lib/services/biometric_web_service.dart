@@ -1,3 +1,4 @@
+// ignore: deprecated_member_use
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:js' as js;
 import 'dart:convert';
@@ -32,6 +33,19 @@ class BiometricWebService {
           await js.context.callMethod('authenticateWithBiometric', []);
       return result == true;
     } catch (_) {
+      return false;
+    }
+  }
+
+  /// Authenticates using specific credential ID (for login flow).
+  Future<bool> authenticateDetailed(String credIdBase64) async {
+    try {
+      final result = await js.context
+          .callMethod('authenticateWithBiometricDetailed', [credIdBase64]);
+      return result == true;
+    } catch (e) {
+      // ignore: avoid_print
+      print('Web biometric detailed auth failed: $e');
       return false;
     }
   }

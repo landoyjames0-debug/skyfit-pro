@@ -6,6 +6,7 @@ class UserModel {
   final double weightKg;
   final String? profilePictureUrl;
   final bool biometricEnabled;
+  final String? webCredentialId;
   final String? gender;
   final String? fitnessGoal;
 
@@ -17,6 +18,7 @@ class UserModel {
     required this.weightKg,
     this.profilePictureUrl,
     this.biometricEnabled = false,
+    this.webCredentialId,
     this.gender,
     this.fitnessGoal,
   });
@@ -29,6 +31,7 @@ class UserModel {
         weightKg: (map['weightKg'] ?? 0).toDouble(),
         profilePictureUrl: map['profilePictureUrl'],
         biometricEnabled: map['biometricEnabled'] ?? false,
+        webCredentialId: map['webCredentialId'],
         gender: map['gender'],
         fitnessGoal: map['fitnessGoal'],
       );
@@ -41,6 +44,7 @@ class UserModel {
         'weightKg': weightKg,
         'profilePictureUrl': profilePictureUrl,
         'biometricEnabled': biometricEnabled,
+        'webCredentialId': webCredentialId,
         'gender': gender,
         'fitnessGoal': fitnessGoal,
       };
@@ -51,6 +55,7 @@ class UserModel {
     double? weightKg,
     String? profilePictureUrl,
     bool? biometricEnabled,
+    String? webCredentialId,
     String? gender,
     String? fitnessGoal,
   }) =>
@@ -62,6 +67,7 @@ class UserModel {
         weightKg: weightKg ?? this.weightKg,
         profilePictureUrl: profilePictureUrl ?? this.profilePictureUrl,
         biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+        webCredentialId: webCredentialId ?? this.webCredentialId,
         gender: gender ?? this.gender,
         fitnessGoal: fitnessGoal ?? this.fitnessGoal,
       );
@@ -77,6 +83,10 @@ class UserModel {
     if (bmi < 30.0) return 'Overweight';
     return 'Obese';
   }
+
+  // Helper for base64 images
+  bool get isBase64Image =>
+      profilePictureUrl?.startsWith('data:image/') ?? false;
 
   String get ageGroup => age < 50 ? 'Under50' : 'Over50';
 }
