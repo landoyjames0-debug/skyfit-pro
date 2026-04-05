@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:async';
@@ -312,7 +313,6 @@ class _ProfileViewState extends State<ProfileView>
   late final AnimationController _fadeController;
   late final Animation<double> _fadeAnim;
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -351,7 +351,6 @@ class _ProfileViewState extends State<ProfileView>
     super.dispose();
   }
 
-  // ── Session timeout ────────────────────────────────────────────────────────
   void _onSessionTimeout() {
     if (!mounted) return;
     final dark = _T.isDark(context);
@@ -452,19 +451,12 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Biometric state ────────────────────────────────────────────────────────
-  // Loads both hardware availability AND user preference.
-  // Always reads fresh from the ViewModel (which reads Firestore/prefs)
-  // so the toggle accurately reflects the saved state after registration.
   Future<void> _loadBiometricState() async {
     if (!mounted) return;
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
 
     final available = await authVM.isBiometricAvailable();
-
-    // Always re-fetch the preference fresh from Firestore/prefs
-    // so it reflects what was just saved (e.g. after registering a passkey)
     final enabled = await userVM.isBiometricEnabled();
 
     if (!mounted) return;
@@ -474,7 +466,6 @@ class _ProfileViewState extends State<ProfileView>
     });
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   String _getInitials(String? fullName) {
     if (fullName == null || fullName.trim().isEmpty) return '?';
     final parts = fullName.trim().split(RegExp(r'\s+'));
@@ -500,7 +491,6 @@ class _ProfileViewState extends State<ProfileView>
     ));
   }
 
-  // ── Photo picking ──────────────────────────────────────────────────────────
   Future<void> _showPhotoSourceSheet() async {
     if (_isUploadingPhoto) return;
     final dark = _T.isDark(context);
@@ -593,7 +583,6 @@ class _ProfileViewState extends State<ProfileView>
     }
   }
 
-  // ── Save profile ───────────────────────────────────────────────────────────
   Future<void> _confirmSaveProfile() async {
     if (!_formKey.currentState!.validate()) return;
     final dark = _T.isDark(context);
@@ -690,7 +679,6 @@ class _ProfileViewState extends State<ProfileView>
     }
   }
 
-  // ── Biometric toggle ───────────────────────────────────────────────────────
   Future<void> _confirmToggleBiometric(bool value) async {
     if (_biometricLoading) return;
 
@@ -722,7 +710,6 @@ class _ProfileViewState extends State<ProfileView>
     setState(() => _biometricLoading = true);
     try {
       if (value) {
-        // ── Enabling biometrics ──────────────────────────────────────────────
         if (kIsWeb) {
           // Web: register a new passkey via WebAuthn
           final uid = context.read<AuthViewModel>().currentUser?.uid;
@@ -742,12 +729,17 @@ class _ProfileViewState extends State<ProfileView>
             return;
           }
 
-          // FIX: persist enabled=true to Firestore/prefs FIRST,
-          // then update local state so the toggle visually reflects it.
+          // Save biometric enabled to Firestore + local storage
           await context.read<UserViewModel>().toggleBiometric(true);
           if (!mounted) return;
 
-          // Re-read from the source of truth to confirm it was saved
+          // FIX: Save last_user_uid to SharedPreferences so the login screen
+          // can find it after logout and show the biometric button
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('last_user_uid', uid);
+          if (!mounted) return;
+
+          // Re-read from source of truth to confirm saved
           final confirmed =
               await context.read<UserViewModel>().isBiometricEnabled();
           if (!mounted) return;
@@ -783,8 +775,16 @@ class _ProfileViewState extends State<ProfileView>
 
           if (!authenticated) return;
 
-          // FIX: persist enabled=true FIRST, then re-read to confirm
+          // Save biometric enabled to Firestore + local storage
           await context.read<UserViewModel>().toggleBiometric(true);
+          if (!mounted) return;
+
+          // FIX: Save last_user_uid so login screen can show biometric button
+          final uid = context.read<AuthViewModel>().currentUser?.uid;
+          if (uid != null) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('last_user_uid', uid);
+          }
           if (!mounted) return;
 
           final confirmed =
@@ -795,12 +795,15 @@ class _ProfileViewState extends State<ProfileView>
           _showSnack('Biometric login enabled!', isError: false);
         }
       } else {
-        // ── Disabling biometrics ─────────────────────────────────────────────
+        // Disabling biometrics
         await context.read<UserViewModel>().updateProfile(
             {'biometricEnabled': false, 'webCredentialId': null});
         if (!mounted) return;
 
-        // FIX: re-read from source of truth after disabling too
+        // Also clear local storage
+        await context.read<UserViewModel>().toggleBiometric(false);
+        if (!mounted) return;
+
         final confirmed =
             await context.read<UserViewModel>().isBiometricEnabled();
         if (!mounted) return;
@@ -809,8 +812,6 @@ class _ProfileViewState extends State<ProfileView>
         _showSnack('Biometric login disabled.', isError: false);
       }
     } catch (_) {
-      // FIX: on any error, reload the real state from source of truth
-      // so the toggle doesn't get stuck in the wrong visual position
       await _loadBiometricState();
       _showSnack('Failed to update biometric setting.', isError: true);
     } finally {
@@ -818,7 +819,6 @@ class _ProfileViewState extends State<ProfileView>
     }
   }
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
   Future<void> _confirmLogout() async {
     final dark = _T.isDark(context);
     final confirmed = await _showConfirmModal(context,
@@ -843,7 +843,6 @@ class _ProfileViewState extends State<ProfileView>
         MaterialPageRoute(builder: (_) => const LoginView()), (route) => false);
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -877,7 +876,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Layouts ────────────────────────────────────────────────────────────────
   Widget _buildWebLayout(
       BuildContext context, user, AuthViewModel authVM, bool dark, Size size) {
     return Column(children: [
@@ -973,7 +971,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Top bar ────────────────────────────────────────────────────────────────
   Widget _buildTopBar(BuildContext context, AuthViewModel authVM, bool dark,
       {required bool isWeb}) {
     return Container(
@@ -1038,7 +1035,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Web hero ───────────────────────────────────────────────────────────────
   Widget _buildWebHero(user, bool dark) {
     final initials = _getInitials(user?.fullName);
     return Container(
@@ -1152,7 +1148,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Mobile hero ────────────────────────────────────────────────────────────
   Widget _buildMobileHero(user, bool dark) {
     final initials = _getInitials(user?.fullName);
     return Container(
@@ -1237,7 +1232,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Photo widget ───────────────────────────────────────────────────────────
   Widget _photoWidget(double size, String initials) {
     if (_localImageBytes != null) {
       return ClipOval(
@@ -1281,20 +1275,15 @@ class _ProfileViewState extends State<ProfileView>
     return kg == kg.truncateToDouble() ? '${kg.toInt()} kg' : '$kg kg';
   }
 
-  // ── Stats row (mobile) ─────────────────────────────────────────────────────
   Widget _buildStatsRow(user, bool dark) {
     final stats = [
       {'label': 'Age', 'value': _formatAge(user?.age), 'color': _T.cyan},
       {
         'label': 'Weight',
         'value': _formatWeight(user?.weightKg),
-        'color': _T.amber,
+        'color': _T.amber
       },
-      {
-        'label': 'Gender',
-        'value': user?.gender ?? '—',
-        'color': _T.violet,
-      },
+      {'label': 'Gender', 'value': user?.gender ?? '—', 'color': _T.violet},
     ];
     return Row(
       children: stats.asMap().entries.map((e) {
@@ -1330,7 +1319,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Stats card (web) ───────────────────────────────────────────────────────
   Widget _buildStatsCard(user, bool dark) {
     return _card(dark,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1373,7 +1361,6 @@ class _ProfileViewState extends State<ProfileView>
 
   Widget _divider(bool dark) => Container(height: 1, color: _T.divider(dark));
 
-  // ── Edit card ──────────────────────────────────────────────────────────────
   Widget _buildEditCard(bool dark) {
     return _card(dark,
         child: Column(
@@ -1382,8 +1369,6 @@ class _ProfileViewState extends State<ProfileView>
             children: [
               _cardHeader('Edit Profile', Icons.edit_outlined, _T.cyan, dark),
               const SizedBox(height: 18),
-
-              // Photo picker row
               GestureDetector(
                 onTap: _isUploadingPhoto ? null : _showPhotoSourceSheet,
                 child: Container(
@@ -1491,11 +1476,9 @@ class _ProfileViewState extends State<ProfileView>
                   ]),
                 ),
               ),
-
               Padding(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   child: Container(height: 1, color: _T.divider(dark))),
-
               _field(_nameCtrl, 'Full Name', Icons.person_outline_rounded, dark,
                   validator: (v) =>
                       (v?.trim().isEmpty ?? true) ? 'Name is required' : null),
@@ -1539,7 +1522,6 @@ class _ProfileViewState extends State<ProfileView>
                   ],
                   onChanged: (v) => setState(() => _fitnessGoal = v)),
               const SizedBox(height: 18),
-
               GestureDetector(
                 onTap: _isSaving ? null : _confirmSaveProfile,
                 child: AnimatedContainer(
@@ -1585,7 +1567,6 @@ class _ProfileViewState extends State<ProfileView>
             ]));
   }
 
-  // ── Dropdown helper ────────────────────────────────────────────────────────
   Widget _buildDropdown(
     bool dark, {
     required String label,
@@ -1636,7 +1617,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Security card ──────────────────────────────────────────────────────────
   Widget _buildSecurityCard(bool dark) {
     final biometricActive = _biometricAvailable && _biometricEnabled;
     final biometricDisabled = !_biometricAvailable;
@@ -1767,7 +1747,6 @@ class _ProfileViewState extends State<ProfileView>
         ]));
   }
 
-  // ── Preferences card ───────────────────────────────────────────────────────
   Widget _buildPreferencesCard(AuthViewModel authVM, bool dark) {
     return _card(dark,
         child:
@@ -1904,7 +1883,6 @@ class _ProfileViewState extends State<ProfileView>
         ]));
   }
 
-  // ── Sign out button ────────────────────────────────────────────────────────
   Widget _buildSignOutButton(bool dark) {
     return GestureDetector(
       onTap: _confirmLogout,
@@ -1927,7 +1905,6 @@ class _ProfileViewState extends State<ProfileView>
     );
   }
 
-  // ── Card / header / field helpers ──────────────────────────────────────────
   Widget _card(bool dark, {required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(22),

@@ -61,12 +61,17 @@ class UserViewModel extends ChangeNotifier {
   }
 
   Future<bool> toggleBiometric(bool enabled) async {
+    // FIX: Save to both local storage AND Firestore
     await _storage.setBiometricEnabled(enabled);
     return await updateProfile({'biometricEnabled': enabled});
   }
 
-  Future<bool> isBiometricEnabled() async =>
-      _user?.biometricEnabled ?? await _storage.isBiometricEnabled();
+  // FIX: Always prioritize Firestore _user model when loaded,
+  // fall back to local storage only when _user is null (e.g. before loadUser)
+  Future<bool> isBiometricEnabled() async {
+    if (_user != null) return _user!.biometricEnabled;
+    return await _storage.isBiometricEnabled();
+  }
 
   /// Mobile-only Storage upload (web uses base64)
   Future<void> updateProfilePicture(String filePath) async {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import '../../viewmodels/auth_viewmodel.dart';
@@ -24,14 +25,11 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   bool _isLoading = false;
   bool _isBiometricLoading = false;
 
-  // ── Biometric state ────────────────────────────────────────────────────────
   bool _showBiometric = false;
   bool _biometricLockedOut = false;
   int _biometricFailCount = 0;
   static const int _maxBiometricAttempts = 3;
 
-  // FIX: track whether a biometric check is already running
-  // to prevent duplicate calls from didChangeDependencies
   bool _biometricCheckInProgress = false;
 
   Timer? _errorDismissTimer;
@@ -75,24 +73,18 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     _slideController.forward();
   }
 
-  // ── FIX: use didChangeDependencies instead of addPostFrameCallback ─────────
-  // This fires on first build AND every time this screen is navigated back to
-  // (e.g. returning from Profile after enabling biometrics), ensuring the
-  // biometric button always reflects the latest saved preference.
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Only run if not locked out and not already checking
     if (!_biometricLockedOut && !_biometricCheckInProgress) {
       _checkBiometricAvailability();
     }
   }
 
-  // ── Biometric visibility logic ─────────────────────────────────────────────
+  // FIX: Read last_user_uid from SharedPreferences when currentUser is null (after logout)
   Future<void> _checkBiometricAvailability() async {
     if (!mounted) return;
 
-    // Guard against concurrent calls
     _biometricCheckInProgress = true;
 
     final authVM = context.read<AuthViewModel>();
@@ -102,18 +94,27 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     final deviceSupports = await authVM.isBiometricAvailable();
     if (!deviceSupports) {
       if (mounted) {
-        setState(() => _showBiometric = false);
-        _biometricCheckInProgress = false;
+        setState(() {
+          _showBiometric = false;
+          _biometricCheckInProgress = false;
+        });
       }
       return;
     }
 
-    // 2. Use active Firebase user (login screen should have session)
-    final uid = authVM.currentUser?.uid;
+    // 2. FIX: Try currentUser first, then fall back to last_user_uid saved on logout
+    String? uid = authVM.currentUser?.uid;
+    if (uid == null) {
+      final prefs = await SharedPreferences.getInstance();
+      uid = prefs.getString('last_user_uid');
+    }
+
     if (uid == null) {
       if (mounted) {
-        setState(() => _showBiometric = false);
-        _biometricCheckInProgress = false;
+        setState(() {
+          _showBiometric = false;
+          _biometricCheckInProgress = false;
+        });
       }
       return;
     }
@@ -123,13 +124,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
 
     // 4. Read saved preference (prioritizes Firestore _user)
     final userEnabled = await userVM.isBiometricEnabled();
-
-    if (mounted) {
-      setState(() {
-        _showBiometric = deviceSupports && userEnabled && !_biometricLockedOut;
-        _biometricCheckInProgress = false;
-      });
-    }
 
     if (mounted) {
       setState(() {
@@ -161,7 +155,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // ── Login success modal ────────────────────────────────────────────────────
   Future<void> _showLoginSuccessModal(String name) async {
     final size = MediaQuery.of(context).size;
     final isSmallScreen = size.width < 400;
@@ -280,7 +273,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     );
   }
 
-  // ── Email login ────────────────────────────────────────────────────────────
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) {
@@ -310,7 +302,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     }
   }
 
-  // ── Google sign-in ─────────────────────────────────────────────────────────
   Future<void> _googleSignIn() async {
     setState(() => _isLoading = true);
     final authVM = context.read<AuthViewModel>();
@@ -333,7 +324,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     }
   }
 
-  // ── Biometric authentication ───────────────────────────────────────────────
   Future<void> _onBiometricPressed() async {
     if (_biometricLockedOut || !_showBiometric) return;
 
@@ -416,7 +406,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     ));
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -589,7 +578,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
                         : const Color(0xFF5A6A7A),
                     fontSize: 13)),
             const SizedBox(height: 24),
-
             _buildInputField(
               controller: _emailCtrl,
               focusNode: _emailFocus,
@@ -608,7 +596,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
               },
             ),
             const SizedBox(height: 14),
-
             _buildInputField(
               controller: _passCtrl,
               focusNode: _passFocus,
@@ -637,8 +624,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
               validator: (v) =>
                   (v == null || v.isEmpty) ? 'Password is required' : null,
             ),
-
-            // ── Lockout hint banner ──────────────────────────────────────────
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -670,10 +655,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
                     )
                   : const SizedBox.shrink(),
             ),
-
             const SizedBox(height: 16),
-
-            // ── Error banner ─────────────────────────────────────────────────
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -713,7 +695,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
                     )
                   : const SizedBox.shrink(),
             ),
-
             _buildPrimaryButton(
               label: 'Sign In',
               icon: Icons.arrow_forward_rounded,
@@ -726,7 +707,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
               glowColor: const Color(0xFF00D4FF),
               onTap: _login,
             ),
-
             const SizedBox(height: 20),
             Row(children: [
               Expanded(
@@ -751,11 +731,7 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
                           : const Color(0xFFE2E8F0))),
             ]),
             const SizedBox(height: 16),
-
             _buildGoogleButton(isDark),
-
-            // ── Biometric button — shown only when device supports it
-            // AND the user has enabled it in Profile ─────────────────────────
             if (_showBiometric) ...[
               const SizedBox(height: 12),
               _buildBiometricButton(),
@@ -1038,7 +1014,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   }
 }
 
-// ── Dark animated background ──────────────────────────────────────────────────
 class _AnimatedBackground extends StatelessWidget {
   final AnimationController controller;
   final Size size;
