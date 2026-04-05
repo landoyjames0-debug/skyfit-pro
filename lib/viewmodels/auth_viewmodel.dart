@@ -20,21 +20,17 @@ class AuthViewModel extends ChangeNotifier {
   String? _errorMessage;
   ThemeMode _themeMode = ThemeMode.system;
 
-  // ─── Getters ───────────────────────────────────────────────────────────────
   bool get isLoggedIn => _isLoggedIn;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   ThemeMode get themeMode => _themeMode;
   User? get currentUser => _repo.currentUser;
 
-  // ─── Constructor ───────────────────────────────────────────────────────────
   AuthViewModel() {
     _init();
   }
 
-  // ─── Initialization ────────────────────────────────────────────────────────
   Future<void> _init() async {
-    // Clear any stale in-memory lock from a previous session
     _localAuth.resetAttempts();
 
     final saved = await _storage.getThemeMode();
@@ -57,18 +53,15 @@ class AuthViewModel extends ChangeNotifier {
     _repo.authStateChanges.listen((user) async {
       authResolved = true;
       _isLoggedIn = user != null;
-
       if (_isLoggedIn) {
         final token = await _repo.getIdToken();
         if (token != null) await _storage.saveToken(token);
       }
-
       _isLoading = false;
       notifyListeners();
     });
   }
 
-  // ─── Navigation Helper ─────────────────────────────────────────────────────
   void redirectToHomeIfLoggedIn(BuildContext context) {
     if (!isLoading && isLoggedIn) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -77,7 +70,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // ─── Email Login ───────────────────────────────────────────────────────────
   Future<bool> loginWithEmail(String email, String password) async {
     _clearErrorAndSetLoading();
     try {
@@ -94,7 +86,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // ─── Email Registration ────────────────────────────────────────────────────
   Future<bool> registerWithEmail(
     String email,
     String password, {
@@ -121,7 +112,6 @@ class AuthViewModel extends ChangeNotifier {
     }
   }
 
-  // ─── Google Sign-In ────────────────────────────────────────────────────────
   Future<bool> signInWithGoogle() async {
     _clearErrorAndSetLoading();
     try {
@@ -146,21 +136,19 @@ class AuthViewModel extends ChangeNotifier {
 
   // ─── Biometrics ────────────────────────────────────────────────────────────
 
-  /// Checks if the current platform supports biometric authentication.
   Future<bool> isBiometricAvailable() async {
     if (kIsWeb) return _webBiometric.isSupported();
     return await _localAuth.isAvailable();
   }
 
-  /// Performs biometric authentication and returns a typed [BiometricResult]
-  /// so callers can distinguish success / failed / cancelled / locked
-  /// without inferring meaning from a bare bool.
-  Future<BiometricResult> authenticateWithBiometrics(
-      {UserViewModel? userVM}) async {
+  /// On mobile: always uses local biometric hardware — userVM not needed.
+  /// On web: needs userVM to get the stored credential ID.
+  Future<BiometricResult> authenticateWithBiometrics({
+    UserViewModel? userVM,
+  }) async {
     if (kIsWeb) {
       if (userVM?.user?.webCredentialId == null) {
-        debugPrint(
-            '[AuthViewModel] Web biometrics: no credential ID, skipping');
+        debugPrint('[AuthViewModel] Web biometrics: no credential ID');
         return BiometricResult.unavailable;
       }
       final ok = await _webBiometric
@@ -168,6 +156,7 @@ class AuthViewModel extends ChangeNotifier {
       return ok ? BiometricResult.success : BiometricResult.failed;
     }
 
+    // Mobile path — no userVM needed
     if (_localAuth.isLocked) {
       _setError('Too many failed attempts. Please use your password.');
       return BiometricResult.locked;
@@ -176,8 +165,6 @@ class AuthViewModel extends ChangeNotifier {
     return await _localAuth.authenticate();
   }
 
-  /// Web only — registers a new passkey for [userId] and saves credential ID
-  /// to Firestore. Returns the base64 credential ID on success, null on failure.
   Future<String?> registerWebBiometric(
       String userId, UserViewModel userVM) async {
     if (!kIsWeb) return null;
@@ -187,40 +174,28 @@ class AuthViewModel extends ChangeNotifier {
     return credId;
   }
 
-  /// Resets the local biometric fail counter — call this after successful
-  /// login or when the user re-enables biometrics from profile settings.
   void resetLocalAuthAttempts() => _localAuth.resetAttempts();
 
-  // ─── Sign Out ──────────────────────────────────────────────────────────────
   Future<void> signOut() async {
     final uid = _repo.currentUser?.uid;
-
-    // Reset biometric lock so the next login session starts clean
     _localAuth.resetAttempts();
-
     await Future.wait([_storage.clearAll(), _repo.signOut()]);
-
-    // Re-save UID so the login screen can check biometric preference
     if (uid != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_user_uid', uid);
     }
-
     _isLoggedIn = false;
     notifyListeners();
   }
 
-  // ─── Theme ─────────────────────────────────────────────────────────────────
   Future<void> toggleTheme() async {
     _themeMode =
         _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    await _storage.setThemeMode(
-      _themeMode == ThemeMode.dark ? 'dark' : 'light',
-    );
+    await _storage
+        .setThemeMode(_themeMode == ThemeMode.dark ? 'dark' : 'light');
     notifyListeners();
   }
 
-  // ─── Error Helpers ─────────────────────────────────────────────────────────
   void clearError() {
     _errorMessage = null;
     notifyListeners();
@@ -244,7 +219,6 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ─── Firebase Error Parser ─────────────────────────────────────────────────
   String _parseAuthError(String error) {
     const Map<String, String> errorMap = {
       'user-not-found': 'No account found with this email.',
@@ -260,13 +234,9 @@ class AuthViewModel extends ChangeNotifier {
       'credential-already-in-use':
           'This credential is already linked to another account.',
     };
-
     for (final entry in errorMap.entries) {
-      if (error == entry.key || error.contains(entry.key)) {
-        return entry.value;
-      }
+      if (error == entry.key || error.contains(entry.key)) return entry.value;
     }
-
     return 'Something went wrong. Please try again.';
   }
 }

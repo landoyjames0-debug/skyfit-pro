@@ -31,7 +31,8 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   int _biometricFailCount = 0;
   static const int _maxBiometricAttempts = 3;
 
-  bool _biometricCheckInProgress = false;
+  // Only run the biometric availability check once
+  bool _biometricCheckDone = false;
 
   Timer? _errorDismissTimer;
 
@@ -77,7 +78,9 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_biometricLockedOut && !_biometricCheckInProgress) {
+    // Guard: only ever run once — not on every rebuild/dependency change
+    if (!_biometricCheckDone) {
+      _biometricCheckDone = true;
       _checkBiometricAvailability();
     }
   }
@@ -85,19 +88,14 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
   Future<void> _checkBiometricAvailability() async {
     if (!mounted) return;
 
-    _biometricCheckInProgress = true;
-
     final authVM = context.read<AuthViewModel>();
     final userVM = context.read<UserViewModel>();
 
     final deviceSupports = await authVM.isBiometricAvailable();
+    if (!mounted) return;
+
     if (!deviceSupports) {
-      if (mounted) {
-        setState(() {
-          _showBiometric = false;
-          _biometricCheckInProgress = false;
-        });
-      }
+      setState(() => _showBiometric = false);
       return;
     }
 
@@ -108,25 +106,19 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     }
 
     if (uid == null) {
-      if (mounted) {
-        setState(() {
-          _showBiometric = false;
-          _biometricCheckInProgress = false;
-        });
-      }
+      if (mounted) setState(() => _showBiometric = false);
       return;
     }
 
     await userVM.loadUser(uid);
+    if (!mounted) return;
 
     final userEnabled = await userVM.isBiometricEnabled();
+    if (!mounted) return;
 
-    if (mounted) {
-      setState(() {
-        _showBiometric = deviceSupports && userEnabled && !_biometricLockedOut;
-        _biometricCheckInProgress = false;
-      });
-    }
+    setState(() {
+      _showBiometric = userEnabled && !_biometricLockedOut;
+    });
   }
 
   void _scheduleErrorDismiss() {
@@ -329,15 +321,19 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
     final userVM = context.read<UserViewModel>();
     final nav = Navigator.of(context);
 
-    final result = await authVM.authenticateWithBiometrics(userVM: userVM);
+    // Mobile passes no userVM — auth_viewmodel handles it natively
+    // Web passes userVM so it can read the credential ID
+    final result = await authVM.authenticateWithBiometrics(
+      userVM: userVM,
+    );
 
     if (!mounted) return;
     setState(() => _isBiometricLoading = false);
 
     switch (result) {
       case BiometricResult.success:
-        // Reset fail state and navigate
         _biometricFailCount = 0;
+        authVM.resetLocalAuthAttempts();
         final displayName = authVM.currentUser?.displayName ??
             authVM.currentUser?.email?.split('@').first ??
             'Athlete';
@@ -350,11 +346,11 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
         }
 
       case BiometricResult.cancelled:
-        // User dismissed the OS prompt — silent, no count change, no snackbar
+        // OS prompt dismissed — do nothing, keep button visible
         break;
 
       case BiometricResult.failed:
-        // Only here do we increment — a real fingerprint rejection happened
+        // Real fingerprint rejection — only now increment
         _biometricFailCount++;
         final remaining = _maxBiometricAttempts - _biometricFailCount;
 
@@ -393,7 +389,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
         }
 
       case BiometricResult.locked:
-        // Shouldn't reach here due to guard at the top, but handle defensively
         setState(() {
           _showBiometric = false;
           _biometricLockedOut = true;
@@ -401,7 +396,6 @@ class _LoginViewState extends State<LoginView> with TickerProviderStateMixin {
         _showBiometricLockedSnackbar();
 
       case BiometricResult.unavailable:
-        // Web credential missing or sensor gone — hide button silently
         setState(() => _showBiometric = false);
     }
   }
