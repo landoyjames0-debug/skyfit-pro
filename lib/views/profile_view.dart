@@ -719,10 +719,14 @@ class _ProfileViewState extends State<ProfileView>
                 isError: true);
             return;
           }
+
+          // Call registerWebBiometric — this now uses promiseToFuture
+          // so it properly awaits the JS WebAuthn result
           final credId = await context
               .read<AuthViewModel>()
               .registerWebBiometric(uid, context.read<UserViewModel>());
           if (!mounted) return;
+
           if (credId == null) {
             _showSnack(
                 'Passkey registration cancelled or failed. Please try again.',
@@ -730,17 +734,25 @@ class _ProfileViewState extends State<ProfileView>
             return;
           }
 
-          // Save biometric enabled to Firestore + local storage
+          // FIX: Save credId to Firestore FIRST before anything else.
+          // Previously credId was obtained but never explicitly saved here,
+          // leaving webCredentialId as null in Firestore.
+          await context.read<UserViewModel>().updateProfile({
+            'webCredentialId': credId,
+            'biometricEnabled': true,
+          });
+          if (!mounted) return;
+
+          // Also sync biometricEnabled to local storage
           await context.read<UserViewModel>().toggleBiometric(true);
           if (!mounted) return;
 
-          // FIX: Save last_user_uid to SharedPreferences so the login screen
-          // can find it after logout and show the biometric button
+          // Save last_user_uid so login screen can show the passkey button
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('last_user_uid', uid);
           if (!mounted) return;
 
-          // Re-read from source of truth to confirm saved
+          // Re-read from Firestore to confirm save was successful
           final confirmed =
               await context.read<UserViewModel>().isBiometricEnabled();
           if (!mounted) return;
@@ -753,7 +765,6 @@ class _ProfileViewState extends State<ProfileView>
           _biometricFailCount = 0;
           bool authenticated = false;
 
-          // REPLACE WITH (new code)
           while (_biometricFailCount < _maxBiometricAttempts) {
             final result = await context
                 .read<AuthViewModel>()
@@ -766,7 +777,6 @@ class _ProfileViewState extends State<ProfileView>
             }
 
             if (result == BiometricResult.cancelled) {
-              // User dismissed the prompt — exit silently, no count change
               return;
             }
 
@@ -776,7 +786,6 @@ class _ProfileViewState extends State<ProfileView>
               return;
             }
 
-            // BiometricResult.failed — real fingerprint rejection
             _biometricFailCount++;
             if (_biometricFailCount >= _maxBiometricAttempts) {
               _showSnack(
@@ -792,11 +801,9 @@ class _ProfileViewState extends State<ProfileView>
 
           if (!authenticated) return;
 
-          // Save biometric enabled to Firestore + local storage
           await context.read<UserViewModel>().toggleBiometric(true);
           if (!mounted) return;
 
-          // FIX: Save last_user_uid so login screen can show biometric button
           final uid = context.read<AuthViewModel>().currentUser?.uid;
           if (uid != null) {
             final prefs = await SharedPreferences.getInstance();
@@ -812,12 +819,11 @@ class _ProfileViewState extends State<ProfileView>
           _showSnack('Biometric login enabled!', isError: false);
         }
       } else {
-        // Disabling biometrics
+        // Disabling biometrics — clear both fields in Firestore
         await context.read<UserViewModel>().updateProfile(
             {'biometricEnabled': false, 'webCredentialId': null});
         if (!mounted) return;
 
-        // Also clear local storage
         await context.read<UserViewModel>().toggleBiometric(false);
         if (!mounted) return;
 
@@ -828,7 +834,8 @@ class _ProfileViewState extends State<ProfileView>
         setState(() => _biometricEnabled = confirmed);
         _showSnack('Biometric login disabled.', isError: false);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ProfileView] Biometric toggle error: $e');
       await _loadBiometricState();
       _showSnack('Failed to update biometric setting.', isError: true);
     } finally {
